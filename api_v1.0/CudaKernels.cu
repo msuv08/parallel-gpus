@@ -1,7 +1,7 @@
 #include <cuda_runtime.h>
 #include <iostream>
 
-__global__ void grayscaleKernel(unsigned char *input, unsigned char *output, int width, int height) {
+__global__ void grayscaleKernel(unsigned char* input, unsigned char* output, int width, int height) {
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
     if (x < width && y < height) {
@@ -14,7 +14,7 @@ __global__ void grayscaleKernel(unsigned char *input, unsigned char *output, int
     }
 }
 
-extern "C" void launchGrayscaleKernel(unsigned char *input, unsigned char *output, int width, int height, cudaStream_t stream) {
+extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream) {
     dim3 blockSize(16, 16);
     dim3 gridSize((width + 15) / 16, (height + 15) / 16);
     grayscaleKernel<<<gridSize, blockSize, 0, stream>>>(input, output, width, height);

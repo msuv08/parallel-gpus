@@ -6,7 +6,6 @@
 int main() {
     std::string imagePath = "cybertruck.jpeg";
     cv::Mat img = cv::imread(imagePath, cv::IMREAD_COLOR);
-
     if (img.empty()) {
         std::cerr << "Error: Image not found." << std::endl;
         return -1;
@@ -28,5 +27,6 @@ int main() {
     cv::imwrite("cybertruck_grayscale.jpeg", resultImg);
 
     std::cout << "Grayscale image saved to cybertruck_grayscale.jpeg" << std::endl;
+
     return 0;
 }
