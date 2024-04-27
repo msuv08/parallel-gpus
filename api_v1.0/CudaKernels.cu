@@ -1,4 +1,5 @@
 #include <cuda_runtime.h>
+#include <cufft.h>
 #include <iostream>
 
 __global__ void grayscaleKernel(unsigned char* input, unsigned char* output, int width, int height) {
@@ -20,4 +21,14 @@ extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* outpu
     grayscaleKernel<<<gridSize, blockSize, 0, stream>>>(input, output, width, height);
     cudaDeviceSynchronize();
     std::cout << "Grayscale kernel execution complete." << std::endl;
+}
+
+extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, int height, cudaStream_t stream) {
+    cufftHandle plan;
+    cufftPlan2d(&plan, width, height, CUFFT_R2C);
+    cufftSetStream(plan, stream);
+    cufftExecR2C(plan, input, output);
+    cufftDestroy(plan);
+    cudaDeviceSynchronize();
+    std::cout << "FFT execution complete." << std::endl;
 }
