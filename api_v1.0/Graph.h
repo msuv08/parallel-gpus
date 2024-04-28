@@ -3,6 +3,8 @@
 class Graph {
     public: 
         Graph();
+        // graph version to pass in the total vertices?
+        Graph(int totalVertices);
         ~Graph();
         void addEdge(int u, int v);
         void removeEdge(int u, int v);
