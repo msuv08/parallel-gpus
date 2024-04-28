@@ -1,5 +1,8 @@
 # GigaAPI for GPU Parallization: The Documentation 
 
+![image](https://github.com/msuv08/parallel-gpus/assets/61725820/56c7c852-fdf4-4d9e-833a-d61648ddad51)
+
+
 ## What is the GigaAPI?
 
 This API is a user-space API that is designed to abstract multiple GPUs as a singular, 
