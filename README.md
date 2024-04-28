@@ -1,5 +1,7 @@
 # GigaAPI for GPU Parallization: The Documentation 
 
+### By: Omeed Tehrani and Mihir Suvarna
+
 ![image](https://github.com/msuv08/parallel-gpus/assets/61725820/56c7c852-fdf4-4d9e-833a-d61648ddad51)
 
 
