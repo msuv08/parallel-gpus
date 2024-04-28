@@ -25,10 +25,12 @@ extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* outpu
 
 extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, int height, cudaStream_t stream) {
     cufftHandle plan;
-    cufftPlan2d(&plan, width, height, CUFFT_R2C);
-    cufftSetStream(plan, stream);
-    cufftExecR2C(plan, input, output);
-    cufftDestroy(plan);
-    cudaDeviceSynchronize();
-    std::cout << "FFT execution complete." << std::endl;
+    cufftResult result;
+    std::cout << "FFT KERNEL START..." << std::endl;
+    result = cufftPlan2d(&plan, width, height, CUFFT_R2C);
+    result = cufftSetStream(plan, stream);
+    result = cufftExecR2C(plan, input, output);
+    result = cufftDestroy(plan);
+    cudaError_t cudaResult = cudaDeviceSynchronize();
+    std::cout << "FFT KERNEL END..." << std::endl;
 }

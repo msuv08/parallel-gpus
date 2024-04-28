@@ -1,6 +1,7 @@
 #include "MegaGPU.h"
 #include <iostream>
 #include <cmath>
+#include <fstream>
 
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream);
 extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, int height, cudaStream_t stream);
@@ -16,10 +17,6 @@ MegaGPU::~MegaGPU() {
     if (d_output0) cudaFree(d_output0);
     if (d_input1) cudaFree(d_input1);
     if (d_output1) cudaFree(d_output1);
-    if (d_fftInput0) cudaFree(d_fftInput0);
-    if (d_fftInput1) cudaFree(d_fftInput1);
-    if (d_fftOutput0) cudaFree(d_fftOutput0);
-    if (d_fftOutput1) cudaFree(d_fftOutput1);
 }
 
 void MegaGPU::convertToGrayscale(const unsigned char* input, unsigned char* output, int width, int height) {
@@ -74,46 +71,37 @@ void MegaGPU::convertToGrayscale(const unsigned char* input, unsigned char* outp
     std::cout << "GPU 1 memory freed." << std::endl;
 }
 
-void MegaGPU::prepareData(float* data, int size, float frequency, float sampleRate) {
-    for (int i = 0; i < size; i++) {
-        float t = i / sampleRate;
-        data[i] = sin(2 * M_PI * frequency * t);  // Generating a sinusoidal wave
+void MegaGPU::prepareData(float* input, int size) {
+    std::ifstream inputFile("input_signal.txt");
+    if (!inputFile.is_open()) {
+        std::cerr << "Failed to open input file." << std::endl;
+        return;
     }
+
+    for (int i = 0; i < size; ++i) {
+        if (!(inputFile >> input[i])) {
+            std::cerr << "Insufficient samples in the input file." << std::endl;
+            break;
+        }
+    }
+
+    inputFile.close();
 }
 
-void MegaGPU::performFFT(const float* input, cufftComplex* output, int width, int height) {
-    int totalSize = width * height;
-    int sizePerGPU = totalSize / 2; // Splitting data for two GPUs
+void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int height) {
+    float* d_input;
+    cufftComplex* d_output;
+    cudaMalloc((void**)&d_input, width * sizeof(float));
+    cudaMalloc((void**)&d_output, (width / 2 + 1) * height * sizeof(cufftComplex));
+    cudaMemcpy(d_input, input, width * sizeof(float), cudaMemcpyHostToDevice);
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
 
-    // Allocating memory for FFT input and output on each GPU
-    cudaSetDevice(0);
-    cudaMalloc(&d_fftInput0, sizeof(float) * sizePerGPU);
-    cudaMalloc(&d_fftOutput0, sizeof(cufftComplex) * sizePerGPU);
-    cudaMemcpy(d_fftInput0, input, sizeof(float) * sizePerGPU, cudaMemcpyHostToDevice);
-
-    cudaSetDevice(1);
-    cudaMalloc(&d_fftInput1, sizeof(float) * sizePerGPU);
-    cudaMalloc(&d_fftOutput1, sizeof(cufftComplex) * sizePerGPU);
-    cudaMemcpy(d_fftInput1, input + sizePerGPU, sizeof(float) * sizePerGPU, cudaMemcpyHostToDevice);
-
-    // Performing FFT on each device using separate streams
-    cudaStream_t stream0, stream1;
-    cudaStreamCreate(&stream0);
-    cudaStreamCreate(&stream1);
-    performFFTKernel(d_fftInput0, d_fftOutput0, width, height / 2, stream0);
-    performFFTKernel(d_fftInput1, d_fftOutput1, width, height / 2, stream1);
-
-    // Synchronizing and copying back the results
-    cudaStreamSynchronize(stream0);
-    cudaStreamSynchronize(stream1);
-    cudaMemcpy(output, d_fftOutput0, sizeof(cufftComplex) * sizePerGPU, cudaMemcpyDeviceToHost);
-    cudaMemcpy(output + sizePerGPU, d_fftOutput1, sizeof(cufftComplex) * sizePerGPU, cudaMemcpyDeviceToHost);
-
-    // Cleaning up
-    cudaFree(d_fftInput0);
-    cudaFree(d_fftOutput0);
-    cudaFree(d_fftInput1);
-    cudaFree(d_fftOutput1);
-    cudaStreamDestroy(stream0);
-    cudaStreamDestroy(stream1);
+    // TODO: potentially do time based operations here on kernel call. - omeed
+    performFFTKernel(d_input, d_output, width, height, stream);
+    
+    cudaMemcpy(output, d_output, (width / 2 + 1) * height * sizeof(cufftComplex), cudaMemcpyDeviceToHost);
+    cudaFree(d_input);
+    cudaFree(d_output);
+    cudaStreamDestroy(stream);
 }

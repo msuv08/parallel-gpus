@@ -1,9 +1,14 @@
 #include "Graph.h"
 
+
+// i think this is wrong i need to fix before we attempt bfs 
+
+
 // basic constructor :D 
 Graph::Graph() {
     totalVertices = 0;
     totalEdges = 0;
+ 
 }
 
 // constructor with total vertices, if the user of API wants to specify a graph! 
