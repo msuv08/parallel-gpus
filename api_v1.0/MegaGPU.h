@@ -11,6 +11,7 @@ public:
     void convertToGrayscale(const unsigned char* input, unsigned char* output, int width, int height);
     void prepareData(float* input, int size);
     void performFFT(float* input, cufftComplex* output, int width, int height);
+    void upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
     
 private:
     unsigned char* d_input0, * d_output0;

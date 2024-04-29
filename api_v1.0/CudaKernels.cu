@@ -15,6 +15,20 @@ __global__ void grayscaleKernel(unsigned char* input, unsigned char* output, int
     }
 }
 
+__global__ void upsampleKernel(unsigned char* input, unsigned char* output, int inputWidth, int inputHeight, int scaleFactor) {
+    int x = threadIdx.x + blockIdx.x * blockDim.x;
+    int y = threadIdx.y + blockIdx.y * blockDim.y;
+
+    if (x < inputWidth * scaleFactor && y < inputHeight * scaleFactor) {
+        int srcX = x / scaleFactor;
+        int srcY = y / scaleFactor;
+
+        for (int c = 0; c < 3; c++) {
+            output[(y * inputWidth * scaleFactor + x) * 3 + c] = input[(srcY * inputWidth + srcX) * 3 + c];
+        }
+    }
+}
+
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream) {
     dim3 blockSize(16, 16);
     dim3 gridSize((width + 15) / 16, (height + 15) / 16);
@@ -33,4 +47,13 @@ extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, 
     result = cufftDestroy(plan);
     cudaError_t cudaResult = cudaDeviceSynchronize();
     std::cout << "FFT KERNEL END..." << std::endl;
+}
+
+extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output, int inputWidth, int inputHeight, int scaleFactor, cudaStream_t stream) {
+    dim3 blockSize(16, 16);
+    dim3 gridSize((inputWidth * scaleFactor + 15) / 16, (inputHeight * scaleFactor + 15) / 16);
+
+    upsampleKernel<<<gridSize, blockSize, 0, stream>>>(input, output, inputWidth, inputHeight, scaleFactor);
+    cudaDeviceSynchronize();
+    std::cout << "Upsampling kernel execution complete." << std::endl;
 }
