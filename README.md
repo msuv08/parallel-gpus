@@ -23,5 +23,15 @@ The API is designed to be user-friendly and intuitive, enabling developers to ha
 
 #### Sources
 https://en.wikipedia.org/wiki/Nearest-neighbor_interpolation
+
 https://mriquestions.com/upsampling.html
+
 https://tannerhelland.com/2011/10/01/grayscale-image-algorithm-vb6.html
+
+https://www.researchgate.net/figure/Two-commonly-used-discrete-approximations-to-the-Laplacian-filter_fig1_261459927
+
+https://homepages.inf.ed.ac.uk/rbf/HIPR2/log.htm
+
+https://forums.developer.nvidia.com/t/processing-image-with-a-cuda-kernel-gives-me-different-result-than-a-seemingly-equivalent-cpu-function/282033
+
+
