@@ -7,15 +7,11 @@
 
 ## What is the GigaAPI?
 
-This API is a user-space API that is designed to abstract multiple GPUs as a singular, 
-powerful computing resource. This API aims to simplify the utilization of parallel computing 
-resources, enabling a user creating an application to leverage multiple GPUs for improved 
-performance without the complexity that the traditionally associated with multi-GPU programming 
-or just learning CUDA in general. This is merely a proof of concept, to show that a generalizable
-API for parallism can be advantageous to developers. 
+The user-space API presented in this project aims to simplify the process of utilizing multiple GPUs as a single, powerful computing resource. By abstracting the complexities associated with multi-GPU programming and CUDA, this API allows developers to leverage the benefits of parallel computing without the need for extensive knowledge in these areas.
 
-Again, this is a project that is a proof of concept to incentivize future researchers to
-flesh out general purpose user-space APIs to make multi-GPU programming more trivial.
+The primary goal of this project is to demonstrate the potential advantages of a generalizable API for parallelism, making it more accessible to developers. By providing a proof of concept, this project encourages future researchers to further develop and refine user-space APIs that streamline multi-GPU programming.
+
+The API is designed to be user-friendly and intuitive, enabling developers to harness the power of multiple GPUs with minimal effort. This approach can lead to improved performance in applications without the need for developers to delve into the intricacies of traditional multi-GPU programming or CUDA.
 
 ## 3 Styles of Parallelism
 
