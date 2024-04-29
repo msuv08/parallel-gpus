@@ -5,7 +5,7 @@
 
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream);
 extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, int height, cudaStream_t stream);
-
+extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output, int width, int height, int scaleFactor, cudaStream_t stream);
 MegaGPU::MegaGPU() {
     d_input0 = d_output0 = nullptr;
     d_input1 = d_output1 = nullptr;
