@@ -71,6 +71,20 @@ __global__ void sharpenKernel(unsigned char* input, unsigned char* output, int w
     }
 }
 
+__global__ void matrixMulKernel(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if(row < A_rows && col < B_cols) {
+        float sum = 0.0;
+        for (int k = 0; k < A_cols; ++k) {
+            sum += A[row * A_cols + k] * B[k * B_cols + col];
+        }
+        C[row * B_cols + col] = sum;
+    }
+}
+
+
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream) {
     dim3 blockSize(16, 16);
     dim3 gridSize((width + 15) / 16, (height + 15) / 16);
@@ -102,6 +116,27 @@ extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output
     std::cout << "Upsampling kernel execution complete." << std::endl;
 }
 
+extern "C" void launchSharpenKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream) {
+    dim3 blockSize(16, 16);
+    dim3 gridSize((width + 15) / 16, (height + 15) / 16);
+    sharpenKernel<<<gridSize, blockSize, 0, stream>>>(input, output, width, height);
+    cudaDeviceSynchronize();
+}
+
+
+
+
+extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output, int inputWidth, int inputHeight, int scaleFactor, cudaStream_t stream) {
+    // purely for warp of 32 alignment? -im not sure if this is right, the output is losing quality. 
+    dim3 blockSize(16, 16);
+    dim3 gridSize((inputWidth * scaleFactor + 15) / 16, (inputHeight * scaleFactor + 15) / 16);
+
+    upsampleKernel<<<gridSize, blockSize, 0, stream>>>(input, output, inputWidth, inputHeight, scaleFactor);
+    // do we need this?
+    cudaDeviceSynchronize();
+    std::cout << "Upsampling kernel execution complete." << std::endl;
+}
+
 
 
 
@@ -117,6 +152,10 @@ extern "C" void launchSharpenKernel(unsigned char* input, unsigned char* output,
 
 
 
-
-
-
+extern "C" void launchMatrixMulKernel(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols, cudaStream_t stream) {
+    dim3 blockSize(16, 16);
+    dim3 gridSize((B_cols + blockSize.x - 1) / blockSize.x, (A_rows + blockSize.y - 1) / blockSize.y);
+    matrixMulKernel<<<gridSize, blockSize, 0, stream>>>(A, B, C, A_rows, A_cols, B_cols);
+    cudaDeviceSynchronize();
+    std::cout << "Matrix multiplication kernel execution complete." << std::endl;
+}

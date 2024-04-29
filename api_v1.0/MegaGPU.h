@@ -17,14 +17,21 @@ public:
     void upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
     void upsampleAllImages(const std::vector<std::string>& imagePaths, int scaleFactor);
     void sharpenImage(const unsigned char* input, unsigned char* output, int width, int height);
+    void performMatrixMultiplication(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols);
 
 private:
+    // RGB to Grayscale variables
     unsigned char* d_input0, * d_output0;
     unsigned char* d_input1, * d_output1;
+    // FFT variables
     float* d_fftInput0, * d_fftInput1;
     cufftComplex* d_fftOutput0, * d_fftOutput1;
     int imageWidth, imageHeight, sizePerGPU;
     int scaleFactor;
+    // Matrix multiplication variables
+    float* d_inputA0, *d_inputB0, *d_outputC0;
+    float* d_inputA1, *d_inputB1, *d_outputC1;
+    int sizePerGPU_A, sizePerGPU_B, sizePerGPU_C;
 };
 
 #endif
