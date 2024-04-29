@@ -292,53 +292,57 @@ void MegaGPU::performMatrixMultiplication(float* A, float* B, float* C, int A_ro
     cudaFree(d_outputC1);
     cudaStreamDestroy(stream1);
 }
+#include <iostream>
+#include <string>
+#include <vector>
+#include <cuda_runtime.h>
 
 std::string MegaGPU::parallelMining(const std::string& blockData, const std::string& target) {
 
     std::vector<std::string> miningData;
+    std::cout << "Starting mining process." << std::endl;
 
-    for (unsigned long long nonce = 0; nonce <= 1000000; ++nonce) {
+    for (unsigned long long nonce = 0; nonce <= 200000; ++nonce) {
         std::string nonceStr = std::to_string(nonce);
         std::string paddedNonce = std::string(7 - nonceStr.length(), '0') + nonceStr; 
         std::string data = blockData + paddedNonce;
         miningData.push_back(data);
-        std::cout << data << std::endl;  
+        std::cout << "Generated data with nonce " << nonce << ": " << data << std::endl;  
     }
 
     int numLines = miningData.size();
     int lineSize = miningData[0].length();
+    
+    std::cout << "Total data lines: " << numLines << ", Line size: " << lineSize << std::endl;
 
     char* d_miningData;
     char* d_results;
 
     cudaMalloc(&d_miningData, numLines * lineSize * sizeof(char));
+    std::cout << "Allocated memory for mining data on GPU." << std::endl;
+    
     cudaMalloc(&d_results, numLines * sizeof(char));
+    std::cout << "Allocated memory for results on GPU." << std::endl;
 
     for (int i = 0; i < numLines; i++) {
         cudaMemcpy(d_miningData + i * lineSize, miningData[i].c_str(), lineSize * sizeof(char), cudaMemcpyHostToDevice);
+        std::cout << "Copied line " << i << " to GPU." << std::endl;
     }
-
+    
+    std::cout << "Launching mining kernel." << std::endl;
     launchMiningKernel(d_miningData, numLines, lineSize, d_results, target.c_str());
-    cudaDeviceSynchronize();
+
     std::string result;
     for (int i = 0; i < numLines; i++) {
         char found;
         cudaError_t err = cudaMemcpy(&found, d_results + i, sizeof(char), cudaMemcpyDeviceToHost);
         if (found == 1) {
             result = miningData[i];
+            std::cout << "Match found in line " << i << "." << std::endl;
             break;
+        } else {
+            std::cout << "No match found in line " << i << "." << std::endl;
         }
     }
-
-    cudaError_t err = cudaFree(d_miningData);
-    if (err != cudaSuccess) {
-        std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
-    }
-
-    err = cudaFree(d_results);
-    if (err != cudaSuccess) {
-        std::cerr << "CUDA error: " << cudaGetErrorString(err) << std::endl;
-    }
-
     return result;
 }

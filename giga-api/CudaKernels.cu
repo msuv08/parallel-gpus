@@ -24,6 +24,7 @@ __device__ void simpleHash(const char* data, char* hash, int lineSize) {
     hash[64] = '\0'; 
 }
 
+
 __device__ bool isHashValid(const char* hash, const char* target) {
     for (int i = 0; i < 64; ++i) {
         if (hash[i] > target[i])
@@ -32,6 +33,23 @@ __device__ bool isHashValid(const char* hash, const char* target) {
             return true;
     }
     return true;  
+}
+
+__global__ void miningKernel(const char* data, int numLines, int lineSize, char* results, const char* target) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int i = idx; i < numLines; i += stride) {
+        char hash[65];
+        simpleHash(&data[i * lineSize], hash, lineSize);
+        hash[64] = '\0'; 
+
+        if (isHashValid(hash, target)) {
+            results[i] = 1;
+        } else {
+            results[i] = 0;
+        }
+    }
 }
 
 __global__ void grayscaleKernel(unsigned char* input, unsigned char* output, int width, int height) {
@@ -59,37 +77,6 @@ __global__ void upsampleKernel(unsigned char* input, unsigned char* output, int 
             output[(y * inputWidth * scaleFactor + x) * 3 + c] = input[(srcY * inputWidth + srcX) * 3 + c];
         }
     }
-}
-
-__global__ void miningKernel(char* data, int numLines, int lineSize, char* results, const char* target) {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int stride = blockDim.x * gridDim.x;
-
-    char* localResults = (char*)malloc(numLines * sizeof(char));
-
-    for (int i = idx; i < numLines; i += stride) {
-        char* hash = (char*)malloc(65 * sizeof(char));
-        simpleHash(&data[i * (lineSize + 1)], hash, lineSize);
-        hash[64] = '\0'; 
-
-        if (isHashValid(hash, target)) {
-            localResults[i] = 1;
-        } else {
-            localResults[i] = 0;
-        }
-
-        free(hash);
-    }
-
-    __syncthreads();
-
-    if (threadIdx.x == 0) {
-        for (int i = 0; i < numLines; i++) {
-            results[i] = localResults[i];
-        }
-    }
-
-    free(localResults);
 }
 
 // https://homepages.inf.ed.ac.uk/rbf/HIPR2/log.htm -> 8 worked best here (omeed)
@@ -193,5 +180,4 @@ extern "C" void launchMiningKernel(char* d_miningData, int numLines, int lineSiz
     int blockSize = 1024;  
     int gridSize = (numLines + blockSize - 1) / blockSize;
     miningKernel<<<gridSize, blockSize>>>(d_miningData, numLines, lineSize, d_results, target);
-    cudaDeviceSynchronize();
 }
