@@ -292,11 +292,9 @@ void MegaGPU::performMatrixMultiplication(float* A, float* B, float* C, int A_ro
     cudaFree(d_outputC1);
     cudaStreamDestroy(stream1);
 }
-#include <iostream>
-#include <string>
-#include <vector>
-#include <cuda_runtime.h>
 
+// i dont know why its not working, i added an insane amount of print statements, even generated
+// matching hashes but it isnt working.
 std::string MegaGPU::parallelMining(const std::string& blockData, const std::string& target) {
 
     std::vector<std::string> miningData;
