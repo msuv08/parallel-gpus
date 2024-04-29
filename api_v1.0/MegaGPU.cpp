@@ -10,9 +10,11 @@
 #include <filesystem>
 #include <string>
 
+// externs are used to call the kernel code 
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream);
 extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, int height, cudaStream_t stream);
 extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output, int width, int height, int scaleFactor, cudaStream_t stream);
+extern "C" void launchSharpenKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream);
 
 MegaGPU::MegaGPU() {
     d_input0 = d_output0 = nullptr;
@@ -47,13 +49,13 @@ void MegaGPU::convertToGrayscale(const unsigned char* input, unsigned char* outp
     cudaSetDevice(0);
     cudaMemcpy(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice);
     launchGrayscaleKernel(d_input0, d_output0, imageWidth, halfHeight, 0);
+    std::cout << "Launching GPU Kernel #0: " << std::endl;
 
     // Copy to GPU 1
     cudaSetDevice(1);
     cudaMemcpy(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice);
-    std::cout << "Launching GPU Kernel: " << std::endl;
-
     launchGrayscaleKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, 0);
+    std::cout << "Launching GPU Kernel #1: " << std::endl;
 
     // Copy results back
     cudaDeviceSynchronize();
@@ -106,11 +108,6 @@ void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int heig
     cudaStreamDestroy(stream);
 }
 
-
-// mega gpu follows a very similar pattern to the grayscale conversion, but with a few key differences.
-// (1): The image is split into two parts, and each part is sent to a different GPU.
-// (2): The output image is scaled by a factor of 2, so the output size is calculated accordingly.
-// (3): The upsample kernel is launched on both GPUs, and the results are copied back to the host.
 void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor) {
     imageWidth = width;
     imageHeight = height;
@@ -134,11 +131,13 @@ void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, i
     cudaSetDevice(0);
     cudaMemcpy(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice);
     launchUpsampleKernel(d_input0, d_output0, imageWidth, halfHeight, scaleFactor, 0);
+    std::cout << "Launching GPU Kernel #0: " << std::endl;
 
     // Copy to GPU 1
     cudaSetDevice(1);
     cudaMemcpy(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice);
     launchUpsampleKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, scaleFactor, 0);
+    std::cout << "Launching GPU Kernel #1: " << std::endl;
 
     // Copy results back
     cudaDeviceSynchronize();
@@ -163,6 +162,51 @@ void MegaGPU::upsampleAllImages(const std::vector<std::string>& imagePaths, int 
     // put the other half of the image paths on the other GPU for processing
     std::vector<std::string> gpu1Images(imagePaths.begin() + imagePaths.size() / 2, imagePaths.end());
 
-    // create a thread for each GPU to process the images??
+    // create a thread for each GPU to process the images?? idk bro
     
+}
+
+// very similar to before! 
+void MegaGPU::sharpenImage(const unsigned char* input, unsigned char* output, int width, int height) {
+    std::cout << "Begin sharpening ..." << std::endl;
+    imageWidth = width;
+    imageHeight = height;
+    sizePerGPU = imageWidth * (imageHeight / 2) * 3;
+
+
+    cudaSetDevice(0);
+    cudaMalloc(&d_input0, sizePerGPU);
+    cudaMalloc(&d_output0, sizePerGPU);
+    cudaSetDevice(1);
+    cudaMalloc(&d_input1, sizePerGPU);
+    cudaMalloc(&d_output1, sizePerGPU);
+
+    int halfHeight = imageHeight / 2;
+
+
+    cudaSetDevice(0);
+    cudaMemcpy(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice);
+    launchSharpenKernel(d_input0, d_output0, imageWidth, halfHeight, 0);
+    std::cout << "Launching GPU Kernel #0: " << std::endl;
+
+
+    cudaSetDevice(1);
+    cudaMemcpy(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice);
+    launchSharpenKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, 0);
+    std::cout << "Launching GPU Kernel #1: " << std::endl;
+
+
+    cudaDeviceSynchronize();
+    cudaMemcpy(output, d_output0, sizePerGPU, cudaMemcpyDeviceToHost);
+    cudaMemcpy(output + sizePerGPU, d_output1, sizePerGPU, cudaMemcpyDeviceToHost);
+
+
+    cudaSetDevice(0);
+    cudaFree(d_input0);
+    cudaFree(d_output0);
+    cudaSetDevice(1);
+    cudaFree(d_input1);
+    cudaFree(d_output1);
+
+    std::cout << "End sharpening ..." << std::endl;
 }
