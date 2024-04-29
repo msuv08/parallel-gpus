@@ -50,10 +50,12 @@ extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, 
 }
 
 extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output, int inputWidth, int inputHeight, int scaleFactor, cudaStream_t stream) {
+    // purely for warp of 32 alignment? -im not sure if this is right, the output is losing quality. 
     dim3 blockSize(16, 16);
     dim3 gridSize((inputWidth * scaleFactor + 15) / 16, (inputHeight * scaleFactor + 15) / 16);
 
     upsampleKernel<<<gridSize, blockSize, 0, stream>>>(input, output, inputWidth, inputHeight, scaleFactor);
+    // do we need this?
     cudaDeviceSynchronize();
     std::cout << "Upsampling kernel execution complete." << std::endl;
 }
