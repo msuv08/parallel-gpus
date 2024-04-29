@@ -16,6 +16,7 @@ public:
     void performFFT(float* input, cufftComplex* output, int width, int height);
     void upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
     void upsampleAllImages(const std::vector<std::string>& imagePaths, int scaleFactor);
+    void sharpenImage(const unsigned char* input, unsigned char* output, int width, int height);
 
 private:
     unsigned char* d_input0, * d_output0;
