@@ -32,8 +32,29 @@ void processSingleImage() {
     runSingleImageUpsampling(imagePath, scaleFactor);
 }
 
+void runMultipleImageUpsampling(const std::string& folderPath, int scaleFactor) {
+    
+    // first, we should get a list of all the image names in the directory
+    std::vector<std::string> imageNames;
+    for (const auto& entry : std::filesystem::directory_iterator(folderPath)) {
+        imageNames.push_back(entry.path().string());
+    }
+
+    // lets print the names 
+    for (const auto& name : imageNames) {
+        std::cout << name << std::endl;
+    }
+}
+
 
 void processPhotoDatabase() {
+    std::string folderPath;
+    int scaleFactor;
+    std::cout << "Please enter the exact path to your photo database: ";
+    std::cin >> folderPath;
+    std::cout << "What factor would you like to upscale your images by: ";
+    std::cin >> scaleFactor;
+    runMultipleImageUpsampling(folderPath, scaleFactor);
 
 }
 
