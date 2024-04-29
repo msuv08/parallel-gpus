@@ -1,4 +1,4 @@
-# GigaAPI for GPU Parallization: The Documentation 
+# GigaAPI for GPU Parallelization: The Documentation 
 
 ### By: Omeed Tehrani and Mihir Suvarna
 
@@ -19,3 +19,13 @@ flesh out general purpose user-space APIs to make multi-GPU programming more tri
 
 ## 3 Styles of Parallelism
 
+### Basic Operations (3 subtasks)
+
+### Images (3 subtasks)
+
+### Machine Learning (3 subtasks)
+
+#### Sources
+https://en.wikipedia.org/wiki/Nearest-neighbor_interpolation
+https://mriquestions.com/upsampling.html
+https://tannerhelland.com/2011/10/01/grayscale-image-algorithm-vb6.html
