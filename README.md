@@ -1,4 +1,4 @@
-# GigaAPI for GPU Parallization: The Documentation 
+# GigaAPI for GPU Parallelization: The Documentation 
 
 ### By: Omeed Tehrani and Mihir Suvarna
 
