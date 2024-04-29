@@ -2,10 +2,18 @@
 #include <iostream>
 #include <cmath>
 #include <fstream>
+#include <opencv2/opencv.hpp>
+#include <cuda_runtime.h>
+#include <cufft.h>
+#include <vector>
+#include <thread>
+#include <filesystem>
+#include <string>
 
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream);
 extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, int height, cudaStream_t stream);
 extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output, int width, int height, int scaleFactor, cudaStream_t stream);
+
 MegaGPU::MegaGPU() {
     d_input0 = d_output0 = nullptr;
     d_input1 = d_output1 = nullptr;
@@ -146,4 +154,15 @@ void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, i
     cudaFree(d_input1);
     cudaFree(d_output1);
     std::cout << "End image upsampling..." << std::endl;
+}
+
+void MegaGPU::upsampleAllImages(const std::vector<std::string>& imagePaths, int scaleFactor) {
+    // put half the image paths in the list on one GPU for processing
+    std::vector<std::string> gpu0Images(imagePaths.begin(), imagePaths.begin() + imagePaths.size() / 2);
+
+    // put the other half of the image paths on the other GPU for processing
+    std::vector<std::string> gpu1Images(imagePaths.begin() + imagePaths.size() / 2, imagePaths.end());
+
+    // create a thread for each GPU to process the images??
+    
 }
