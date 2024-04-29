@@ -133,20 +133,12 @@ extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output
     std::cout << "Upsampling kernel execution complete." << std::endl;
 }
 
-
-
-
-
 extern "C" void launchSharpenKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream) {
     dim3 blockSize(16, 16);
     dim3 gridSize((width + 15) / 16, (height + 15) / 16);
     sharpenKernel<<<gridSize, blockSize, 0, stream>>>(input, output, width, height);
     cudaDeviceSynchronize();
 }
-
-
-
-
 
 extern "C" void launchMatrixMulKernel(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols, cudaStream_t stream) {
     dim3 blockSize(16, 16);
