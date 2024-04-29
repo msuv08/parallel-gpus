@@ -1,9 +1,9 @@
-# OPENCV_INCLUDE_DIR=/u/msuvarna/opt/opencv/include/opencv4
-# OPENCV_LIB_DIR=/u/msuvarna/opt/opencv/lib
-# CUDA_LIB_DIR=/u/msuvarna/cuda-12.0/lib64
-OPENCV_INCLUDE_DIR=/u/omeed/opt/opencv/include/opencv4
-OPENCV_LIB_DIR=/u/omeed/opt/opencv/lib
-CUDA_LIB_DIR=/u/omeed/cuda-12.0/lib64
+OPENCV_INCLUDE_DIR=/u/msuvarna/opt/opencv/include/opencv4
+OPENCV_LIB_DIR=/u/msuvarna/opt/opencv/lib
+CUDA_LIB_DIR=/u/msuvarna/cuda-12.0/lib64
+# OPENCV_INCLUDE_DIR=/u/omeed/opt/opencv/include/opencv4
+# OPENCV_LIB_DIR=/u/omeed/opt/opencv/lib
+# CUDA_LIB_DIR=/u/omeed/cuda-12.0/lib64
 
 all: main
 
