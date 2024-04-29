@@ -5,11 +5,14 @@
 
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream);
 extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, int height, cudaStream_t stream);
+extern "C" void launchMatrixMulKernel(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols, cudaStream_t stream);
 
 MegaGPU::MegaGPU() {
     d_input0 = d_output0 = nullptr;
     d_input1 = d_output1 = nullptr;
     imageWidth = imageHeight = sizePerGPU = 0;
+    d_inputA0 = d_inputB0 = d_outputC0 = nullptr;
+    d_inputA1 = d_inputB1 = d_outputC1 = nullptr;
 }
 
 MegaGPU::~MegaGPU() {
@@ -17,6 +20,12 @@ MegaGPU::~MegaGPU() {
     if (d_output0) cudaFree(d_output0);
     if (d_input1) cudaFree(d_input1);
     if (d_output1) cudaFree(d_output1);
+    if (d_inputA0) cudaFree(d_inputA0);
+    if (d_inputB0) cudaFree(d_inputB0);
+    if (d_outputC0) cudaFree(d_outputC0);
+    if (d_inputA1) cudaFree(d_inputA1);
+    if (d_inputB1) cudaFree(d_inputB1);
+    if (d_outputC1) cudaFree(d_outputC1);
 }
 
 void MegaGPU::convertToGrayscale(const unsigned char* input, unsigned char* output, int width, int height) {
@@ -104,4 +113,57 @@ void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int heig
     cudaFree(d_input);
     cudaFree(d_output);
     cudaStreamDestroy(stream);
+}
+
+void MegaGPU::performMatrixMultiplication(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols) {
+    int sizeA = A_rows * A_cols * sizeof(float);
+    int sizeB = A_cols * B_cols * sizeof(float);
+    int sizeC = A_rows * B_cols * sizeof(float);
+    int halfRows = A_rows / 2; // Rows handled by the first GPU
+    int remainingRows = A_rows - halfRows; // Rows handled by the second GPU (important if A_rows is odd)
+
+    // Adjust size calculations for precise memory allocations
+    int sizeA_first_half = halfRows * A_cols * sizeof(float);
+    int sizeA_second_half = remainingRows * A_cols * sizeof(float);
+    int sizeC_first_half = halfRows * B_cols * sizeof(float);
+    int sizeC_second_half = remainingRows * B_cols * sizeof(float);
+
+    cudaSetDevice(0);
+    cudaMalloc(&d_inputA0, sizeA_first_half);
+    cudaMalloc(&d_inputB0, sizeB); // Full B
+    cudaMalloc(&d_outputC0, sizeC_first_half);
+    cudaMemcpy(d_inputA0, A, sizeA_first_half, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_inputB0, B, sizeB, cudaMemcpyHostToDevice);
+
+    cudaSetDevice(1);
+    cudaMalloc(&d_inputA1, sizeA_second_half);
+    cudaMalloc(&d_inputB1, sizeB); // Full B
+    cudaMalloc(&d_outputC1, sizeC_second_half);
+    cudaMemcpy(d_inputA1, A + halfRows * A_cols, sizeA_second_half, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_inputB1, B, sizeB, cudaMemcpyHostToDevice);
+
+    cudaStream_t stream0, stream1;
+    cudaStreamCreate(&stream0);
+    cudaStreamCreate(&stream1);
+
+    // Launch kernels using streams
+    std::cout << "Launching matrix multiplication on GPU 0..." << std::endl;
+    launchMatrixMulKernel(d_inputA0, d_inputB0, d_outputC0, halfRows, A_cols, B_cols, stream0);
+    std::cout << "Launching matrix multiplication on GPU 1..." << std::endl;
+    launchMatrixMulKernel(d_inputA1, d_inputB1, d_outputC1, remainingRows, A_cols, B_cols, stream1);
+
+    // Synchronize and copy back results
+    cudaDeviceSynchronize();
+    cudaMemcpy(C, d_outputC0, sizeC_first_half, cudaMemcpyDeviceToHost);
+    cudaMemcpy(C + halfRows * B_cols, d_outputC1, sizeC_second_half, cudaMemcpyDeviceToHost);
+
+    // Free resources
+    cudaFree(d_inputA0);
+    cudaFree(d_inputB0);
+    cudaFree(d_outputC0);
+    cudaFree(d_inputA1);
+    cudaFree(d_inputB1);
+    cudaFree(d_outputC1);
+    cudaStreamDestroy(stream0);
+    cudaStreamDestroy(stream1);
 }

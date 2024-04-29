@@ -18,11 +18,7 @@ int main() {
     std::cout << "Performing matrix multiplication..." << std::endl;
     mega.performMatrixMultiplication(A.data(), B.data(), C.data(), A_rows, A_cols, B_cols);
 
-    std::cout << "Matrix multiplication completed. First few elements of C are:" << std::endl;
-    // Print first 10 elements of matrix C
-    for (int i = 0; i < 10; ++i) {
-        std::cout << "C[" << i << "] = " << C[i] << std::endl;
-    }
-
+    std::cout << "Matrix multiplication completed." << std::endl;
+    // Optionally, print some elements of matrix C
     return 0;
 }
