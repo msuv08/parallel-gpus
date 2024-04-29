@@ -210,3 +210,49 @@ void MegaGPU::sharpenImage(const unsigned char* input, unsigned char* output, in
 
     std::cout << "End sharpening ..." << std::endl;
 }
+
+// 
+// void MegaGPU::antiAlias(const unsigned char* input, unsigned char* output, int width, int height) {
+//     std::cout << "Begin sharpening ..." << std::endl;
+//     imageWidth = width;
+//     imageHeight = height;
+//     sizePerGPU = imageWidth * (imageHeight / 2) * 3;
+
+
+//     cudaSetDevice(0);
+//     cudaMalloc(&d_input0, sizePerGPU);
+//     cudaMalloc(&d_output0, sizePerGPU);
+//     cudaSetDevice(1);
+//     cudaMalloc(&d_input1, sizePerGPU);
+//     cudaMalloc(&d_output1, sizePerGPU);
+
+//     int halfHeight = imageHeight / 2;
+
+
+//     cudaSetDevice(0);
+//     cudaMemcpy(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice);
+//     launchAntiAliasKernel(d_input0, d_output0, imageWidth, halfHeight, 0);
+//     std::cout << "Launching GPU Kernel #0: " << std::endl;
+
+
+//     cudaSetDevice(1);
+//     cudaMemcpy(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice);
+//     launchAntiAliasKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, 0);
+//     std::cout << "Launching GPU Kernel #1: " << std::endl;
+
+
+//     cudaDeviceSynchronize();
+//     cudaMemcpy(output, d_output0, sizePerGPU, cudaMemcpyDeviceToHost);
+//     cudaMemcpy(output + sizePerGPU, d_output1, sizePerGPU, cudaMemcpyDeviceToHost);
+
+
+//     cudaSetDevice(0);
+//     cudaFree(d_input0);
+//     cudaFree(d_output0);
+//     cudaSetDevice(1);
+//     cudaFree(d_input1);
+//     cudaFree(d_output1);
+
+//     std::cout << "End sharpening ..." << std::endl;
+// }
+
