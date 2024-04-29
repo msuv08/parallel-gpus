@@ -28,47 +28,39 @@ void MegaGPU::convertToGrayscale(const unsigned char* input, unsigned char* outp
     cudaSetDevice(0);
     cudaMalloc(&d_input0, sizePerGPU);
     cudaMalloc(&d_output0, imageWidth * (imageHeight / 2));
-    std::cout << "GPU 0 memory allocated." << std::endl;
 
     cudaSetDevice(1);
     cudaMalloc(&d_input1, sizePerGPU);
     cudaMalloc(&d_output1, imageWidth * (imageHeight / 2));
-    std::cout << "GPU 1 memory allocated." << std::endl;
 
     int halfHeight = imageHeight / 2;
 
     // Copy to GPU 0
     cudaSetDevice(0);
     cudaMemcpy(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice);
-    std::cout << "Data transferred to GPU 0." << std::endl;
-
     launchGrayscaleKernel(d_input0, d_output0, imageWidth, halfHeight, 0);
-    std::cout << "Grayscale conversion started on GPU 0." << std::endl;
 
     // Copy to GPU 1
     cudaSetDevice(1);
     cudaMemcpy(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice);
-    std::cout << "Data transferred to GPU 1." << std::endl;
+    std::cout << "Launching GPU Kernel: " << std::endl;
 
     launchGrayscaleKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, 0);
-    std::cout << "Grayscale conversion started on GPU 1." << std::endl;
 
     // Copy results back
     cudaDeviceSynchronize();
     cudaMemcpy(output, d_output0, imageWidth * halfHeight, cudaMemcpyDeviceToHost);
     cudaMemcpy(output + imageWidth * halfHeight, d_output1, imageWidth * (imageHeight - halfHeight), cudaMemcpyDeviceToHost);
-    std::cout << "Data copied back to host. Synchronization complete." << std::endl;
 
     // Free memory on GPUs
     cudaSetDevice(0);
     cudaFree(d_input0);
     cudaFree(d_output0);
-    std::cout << "GPU 0 memory freed." << std::endl;
 
     cudaSetDevice(1);
     cudaFree(d_input1);
     cudaFree(d_output1);
-    std::cout << "GPU 1 memory freed." << std::endl;
+    std::cout << "End grayscale conversion..." << std::endl;
 }
 
 void MegaGPU::prepareData(float* input, int size) {
@@ -104,4 +96,54 @@ void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int heig
     cudaFree(d_input);
     cudaFree(d_output);
     cudaStreamDestroy(stream);
+}
+
+
+// mega gpu follows a very similar pattern to the grayscale conversion, but with a few key differences.
+// (1): The image is split into two parts, and each part is sent to a different GPU.
+// (2): The output image is scaled by a factor of 2, so the output size is calculated accordingly.
+// (3): The upsample kernel is launched on both GPUs, and the results are copied back to the host.
+void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor) {
+    imageWidth = width;
+    imageHeight = height;
+    sizePerGPU = imageWidth * (imageHeight / 2) * 3; // Each pixel RGB
+    int outputWidth = imageWidth * scaleFactor;
+    int outputHeight = imageHeight * scaleFactor;
+    int outputSizePerGPU = outputWidth * (outputHeight / 2) * 3;
+    std::cout << "Begin image upsampling..." << std::endl;
+
+    // Allocate memory on GPUs
+    cudaSetDevice(0);
+    cudaMalloc(&d_input0, sizePerGPU);
+    cudaMalloc(&d_output0, outputSizePerGPU);
+
+    cudaSetDevice(1);
+    cudaMalloc(&d_input1, sizePerGPU);
+    cudaMalloc(&d_output1, outputSizePerGPU);
+
+    int halfHeight = imageHeight / 2;
+
+    cudaSetDevice(0);
+    cudaMemcpy(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice);
+    launchUpsampleKernel(d_input0, d_output0, imageWidth, halfHeight, scaleFactor, 0);
+
+    // Copy to GPU 1
+    cudaSetDevice(1);
+    cudaMemcpy(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice);
+    launchUpsampleKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, scaleFactor, 0);
+
+    // Copy results back
+    cudaDeviceSynchronize();
+    cudaMemcpy(output, d_output0, outputSizePerGPU, cudaMemcpyDeviceToHost);
+    cudaMemcpy(output + outputSizePerGPU, d_output1, outputSizePerGPU, cudaMemcpyDeviceToHost);
+
+    // Free memory on GPUs
+    cudaSetDevice(0);
+    cudaFree(d_input0);
+    cudaFree(d_output0);
+
+    cudaSetDevice(1);
+    cudaFree(d_input1);
+    cudaFree(d_output1);
+    std::cout << "End image upsampling..." << std::endl;
 }
