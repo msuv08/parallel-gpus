@@ -114,15 +114,14 @@ void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int heig
     cudaFree(d_output);
     cudaStreamDestroy(stream);
 }
-
 void MegaGPU::performMatrixMultiplication(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols) {
     int sizeA = A_rows * A_cols * sizeof(float);
     int sizeB = A_cols * B_cols * sizeof(float);
     int sizeC = A_rows * B_cols * sizeof(float);
-    int halfRows = A_rows / 2; // Rows handled by the first GPU
-    int remainingRows = A_rows - halfRows; // Rows handled by the second GPU (important if A_rows is odd)
 
-    // Adjust size calculations for precise memory allocations
+    int halfRows = A_rows / 2;
+    int remainingRows = A_rows - halfRows;
+
     int sizeA_first_half = halfRows * A_cols * sizeof(float);
     int sizeA_second_half = remainingRows * A_cols * sizeof(float);
     int sizeC_first_half = halfRows * B_cols * sizeof(float);
@@ -130,40 +129,51 @@ void MegaGPU::performMatrixMultiplication(float* A, float* B, float* C, int A_ro
 
     cudaSetDevice(0);
     cudaMalloc(&d_inputA0, sizeA_first_half);
-    cudaMalloc(&d_inputB0, sizeB); // Full B
+    cudaMalloc(&d_inputB0, sizeB); 
     cudaMalloc(&d_outputC0, sizeC_first_half);
     cudaMemcpy(d_inputA0, A, sizeA_first_half, cudaMemcpyHostToDevice);
     cudaMemcpy(d_inputB0, B, sizeB, cudaMemcpyHostToDevice);
 
     cudaSetDevice(1);
     cudaMalloc(&d_inputA1, sizeA_second_half);
-    cudaMalloc(&d_inputB1, sizeB); // Full B
+    cudaMalloc(&d_inputB1, sizeB); 
     cudaMalloc(&d_outputC1, sizeC_second_half);
     cudaMemcpy(d_inputA1, A + halfRows * A_cols, sizeA_second_half, cudaMemcpyHostToDevice);
     cudaMemcpy(d_inputB1, B, sizeB, cudaMemcpyHostToDevice);
 
     cudaStream_t stream0, stream1;
+    cudaSetDevice(0);
     cudaStreamCreate(&stream0);
+    cudaSetDevice(1);
     cudaStreamCreate(&stream1);
 
-    // Launch kernels using streams
     std::cout << "Launching matrix multiplication on GPU 0..." << std::endl;
+    cudaSetDevice(0);
     launchMatrixMulKernel(d_inputA0, d_inputB0, d_outputC0, halfRows, A_cols, B_cols, stream0);
+
     std::cout << "Launching matrix multiplication on GPU 1..." << std::endl;
+    cudaSetDevice(1);
     launchMatrixMulKernel(d_inputA1, d_inputB1, d_outputC1, remainingRows, A_cols, B_cols, stream1);
 
     // Synchronize and copy back results
-    cudaDeviceSynchronize();
+    cudaSetDevice(0);
+    cudaStreamSynchronize(stream0);
     cudaMemcpy(C, d_outputC0, sizeC_first_half, cudaMemcpyDeviceToHost);
+
+    cudaSetDevice(1);
+    cudaStreamSynchronize(stream1);
     cudaMemcpy(C + halfRows * B_cols, d_outputC1, sizeC_second_half, cudaMemcpyDeviceToHost);
 
     // Free resources
+    cudaSetDevice(0);
     cudaFree(d_inputA0);
     cudaFree(d_inputB0);
     cudaFree(d_outputC0);
+    cudaStreamDestroy(stream0);
+
+    cudaSetDevice(1);
     cudaFree(d_inputA1);
     cudaFree(d_inputB1);
     cudaFree(d_outputC1);
-    cudaStreamDestroy(stream0);
     cudaStreamDestroy(stream1);
 }
