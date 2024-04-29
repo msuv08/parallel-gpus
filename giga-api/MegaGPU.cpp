@@ -16,6 +16,9 @@ extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, 
 extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output, int width, int height, int scaleFactor, cudaStream_t stream);
 extern "C" void launchSharpenKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream);
 extern "C" void launchMatrixMulKernel(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols, cudaStream_t stream);
+extern "C" void launchVectorDotKernel(const float* a, const float* b, float* result, int n, cudaStream_t stream);
+extern "C" void launchVectorCrossKernel(const float* a, const float* b, float* c, cudaStream_t stream);
+extern "C" void launchVectorL2NormKernel(const float* a, float* result, int n, cudaStream_t stream);
 
 MegaGPU::MegaGPU() {
     d_input0 = d_output0 = nullptr;
@@ -285,6 +288,74 @@ void MegaGPU::performMatrixMultiplication(float* A, float* B, float* C, int A_ro
     cudaFree(d_outputC1);
     cudaStreamDestroy(stream1);
 }
+
+void MegaGPU::computeDotProduct(const float* a, const float* b, float& result, int n) {
+    // Same setup as the matrix multiplication
+    cudaSetDevice(0);
+    cudaMalloc((void**)&d_vectorA, n * sizeof(float));
+    cudaMalloc((void**)&d_vectorB, n * sizeof(float));
+    cudaMalloc((void**)&d_scalarResult, sizeof(float));
+
+    cudaMemcpy(d_vectorA, a, n * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_vectorB, b, n * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemset(d_scalarResult, 0, sizeof(float));
+
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
+    launchVectorDotKernel(d_vectorA, d_vectorB, d_scalarResult, n, stream);
+
+    cudaMemcpy(&result, d_scalarResult, sizeof(float), cudaMemcpyDeviceToHost);
+
+    cudaFree(d_vectorA);
+    cudaFree(d_vectorB);
+    cudaFree(d_scalarResult);
+    cudaStreamDestroy(stream);
+}
+
+void MegaGPU::computeCrossProduct(const float* a, const float* b, float* c) {
+    // Setup and launch similarly managed
+    cudaSetDevice(0);
+    cudaMalloc((void**)&d_vectorA, 3 * sizeof(float));
+    cudaMalloc((void**)&d_vectorB, 3 * sizeof(float));
+    cudaMalloc((void**)&d_vectorC, 3 * sizeof(float));
+
+    cudaMemcpy(d_vectorA, a, 3 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_vectorB, b, 3 * sizeof(float), cudaMemcpyHostToDevice);
+
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
+    launchVectorCrossKernel(d_vectorA, d_vectorB, d_vectorC, stream);
+
+    cudaMemcpy(c, d_vectorC, 3 * sizeof(float), cudaMemcpyDeviceToHost);
+
+    cudaFree(d_vectorA);
+    cudaFree(d_vectorB);
+    cudaFree(d_vectorC);
+    cudaStreamDestroy(stream);
+}
+
+void MegaGPU::computeL2Norm(const float* a, float& result, int n) {
+    // Setup and launch similarly managed
+    cudaSetDevice(0);
+    cudaMalloc((void**)&d_vectorA, n * sizeof(float));
+    cudaMalloc((void**)&d_scalarResult, sizeof(float));
+
+    cudaMemcpy(d_vectorA, a, n * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemset(d_scalarResult, 0, sizeof(float));
+
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
+    launchVectorL2NormKernel(d_vectorA, d_scalarResult, n, stream);
+
+    float sumOfSquares;
+    cudaMemcpy(&sumOfSquares, d_scalarResult, sizeof(float), cudaMemcpyDeviceToHost);
+    result = sqrt(sumOfSquares);
+
+    cudaFree(d_vectorA);
+    cudaFree(d_scalarResult);
+    cudaStreamDestroy(stream);
+}
+
 
 // 
 // void MegaGPU::antiAlias(const unsigned char* input, unsigned char* output, int width, int height) {

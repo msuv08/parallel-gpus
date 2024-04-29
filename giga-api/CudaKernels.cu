@@ -84,6 +84,68 @@ __global__ void matrixMulKernel(float* A, float* B, float* C, int A_rows, int A_
     }
 }
 
+__global__ void vectorDotKernel(const float* a, const float* b, float* result, int n) {
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x;
+
+    __shared__ float cache[256]; // Assuming a block size of 256, adjust as needed
+
+    float temp_sum = 0.0;
+    for (int i = index; i < n; i += stride) {
+        temp_sum += a[i] * b[i];
+    }
+
+    cache[threadIdx.x] = temp_sum;
+    __syncthreads();
+
+    // Reduction in shared memory
+    int i = blockDim.x / 2;
+    while (i != 0) {
+        if (threadIdx.x < i) {
+            cache[threadIdx.x] += cache[threadIdx.x + i];
+        }
+        __syncthreads();
+        i /= 2;
+    }
+
+    if (threadIdx.x == 0)
+        atomicAdd(result, cache[0]);
+}
+
+__global__ void vectorCrossKernel(const float* a, const float* b, float* c) {
+    if (threadIdx.x == 0) c[0] = a[1] * b[2] - a[2] * b[1];
+    if (threadIdx.x == 1) c[1] = a[2] * b[0] - a[0] * b[2];
+    if (threadIdx.x == 2) c[2] = a[0] * b[1] - a[1] * b[0];
+}
+
+__global__ void vectorL2NormKernel(const float* a, float* result, int n) {
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x;
+
+    __shared__ float cache[256]; // Assuming a block size of 256, adjust as needed
+
+    float temp_sum = 0.0;
+    for (int i = index; i < n; i += stride) {
+        temp_sum += a[i] * a[i];
+    }
+
+    cache[threadIdx.x] = temp_sum;
+    __syncthreads();
+
+    // Reduction in shared memory
+    int i = blockDim.x / 2;
+    while (i != 0) {
+        if (threadIdx.x < i) {
+            cache[threadIdx.x] += cache[threadIdx.x + i];
+        }
+        __syncthreads();
+        i /= 2;
+    }
+
+    if (threadIdx.x == 0)
+        atomicAdd(result, cache[0]);
+}
+
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream) {
     dim3 blockSize(16, 16);
     dim3 gridSize((width + 15) / 16, (height + 15) / 16);
@@ -128,4 +190,28 @@ extern "C" void launchMatrixMulKernel(float* A, float* B, float* C, int A_rows, 
     matrixMulKernel<<<gridSize, blockSize, 0, stream>>>(A, B, C, A_rows, A_cols, B_cols);
     cudaDeviceSynchronize();
     std::cout << "Matrix multiplication kernel execution complete." << std::endl;
+}
+
+extern "C" void launchVectorDotKernel(const float* a, const float* b, float* result, int n, cudaStream_t stream) {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+
+    vectorDotKernel<<<numBlocks, blockSize, 0, stream>>>(a, b, result, n);
+    cudaDeviceSynchronize();
+    std::cout << "Vector dot product kernel execution complete." << std::endl;
+}
+
+extern "C" void launchVectorCrossKernel(const float* a, const float* b, float* c, cudaStream_t stream) {
+    vectorCrossKernel<<<1, 3, 0, stream>>>(a, b, c); // Only one block of three threads needed
+    cudaDeviceSynchronize();
+    std::cout << "Vector cross product kernel execution complete." << std::endl;
+}
+
+extern "C" void launchVectorL2NormKernel(const float* a, float* result, int n, cudaStream_t stream) {
+    int blockSize = 256; // Tune this parameter based on your hardware
+    int numBlocks = (n + blockSize - 1) / blockSize;
+
+    vectorL2NormKernel<<<numBlocks, blockSize, 0, stream>>>(a, result, n);
+    cudaDeviceSynchronize();
+    std::cout << "Vector L2 norm kernel execution complete." << std::endl;
 }
