@@ -10,12 +10,13 @@
 #include <filesystem>
 #include <string>
 
-// externs are used to call the kernel code 
+// externs are used to declare functions within the correct scope.
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream);
 extern "C" void performFFTKernel(float* input, cufftComplex* output, int width, int height, cudaStream_t stream);
 extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output, int width, int height, int scaleFactor, cudaStream_t stream);
 extern "C" void launchSharpenKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream);
 extern "C" void launchMatrixMulKernel(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols, cudaStream_t stream);
+extern "C" void launchMiningKernel(char* miningData, int numLines, int lineSize, char* results, const char* target);
 
 MegaGPU::MegaGPU() {
     d_input0 = d_output0 = nullptr;
@@ -23,9 +24,13 @@ MegaGPU::MegaGPU() {
     imageWidth = imageHeight = sizePerGPU = 0;
     d_inputA0 = d_inputB0 = d_outputC0 = nullptr;
     d_inputA1 = d_inputB1 = d_outputC1 = nullptr;
+    // reset mining pointers
+    d_miningData = nullptr;
+    d_results = nullptr;
 }
 
 MegaGPU::~MegaGPU() {
+    // this is all to simply free the gpu memory! 
     if (d_input0) cudaFree(d_input0);
     if (d_output0) cudaFree(d_output0);
     if (d_input1) cudaFree(d_input1);
@@ -36,6 +41,8 @@ MegaGPU::~MegaGPU() {
     if (d_inputA1) cudaFree(d_inputA1);
     if (d_inputB1) cudaFree(d_inputB1);
     if (d_outputC1) cudaFree(d_outputC1);
+    if (d_miningData) cudaFree(d_miningData);
+    if (d_results) cudaFree(d_results);
 }
 
 void MegaGPU::convertToGrayscale(const unsigned char* input, unsigned char* output, int width, int height) {
@@ -286,47 +293,54 @@ void MegaGPU::performMatrixMultiplication(float* A, float* B, float* C, int A_ro
     cudaStreamDestroy(stream1);
 }
 
-// 
-// void MegaGPU::antiAlias(const unsigned char* input, unsigned char* output, int width, int height) {
-//     std::cout << "Begin sharpening ..." << std::endl;
-//     imageWidth = width;
-//     imageHeight = height;
-//     sizePerGPU = imageWidth * (imageHeight / 2) * 3;
+// i dont know why its not working, i added an insane amount of print statements, even generated
+// matching hashes but it isnt working.
+std::string MegaGPU::parallelMining(const std::string& blockData, const std::string& target) {
 
+    std::vector<std::string> miningData;
+    std::cout << "Starting mining process." << std::endl;
 
-//     cudaSetDevice(0);
-//     cudaMalloc(&d_input0, sizePerGPU);
-//     cudaMalloc(&d_output0, sizePerGPU);
-//     cudaSetDevice(1);
-//     cudaMalloc(&d_input1, sizePerGPU);
-//     cudaMalloc(&d_output1, sizePerGPU);
+    for (unsigned long long nonce = 0; nonce <= 200000; ++nonce) {
+        std::string nonceStr = std::to_string(nonce);
+        std::string paddedNonce = std::string(7 - nonceStr.length(), '0') + nonceStr; 
+        std::string data = blockData + paddedNonce;
+        miningData.push_back(data);
+        std::cout << "Generated data with nonce " << nonce << ": " << data << std::endl;  
+    }
 
-//     int halfHeight = imageHeight / 2;
+    int numLines = miningData.size();
+    int lineSize = miningData[0].length();
+    
+    std::cout << "Total data lines: " << numLines << ", Line size: " << lineSize << std::endl;
 
+    char* d_miningData;
+    char* d_results;
 
-//     cudaSetDevice(0);
-//     cudaMemcpy(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice);
-//     launchAntiAliasKernel(d_input0, d_output0, imageWidth, halfHeight, 0);
-//     std::cout << "Launching GPU Kernel #0: " << std::endl;
+    cudaMalloc(&d_miningData, numLines * lineSize * sizeof(char));
+    std::cout << "Allocated memory for mining data on GPU." << std::endl;
+    
+    cudaMalloc(&d_results, numLines * sizeof(char));
+    std::cout << "Allocated memory for results on GPU." << std::endl;
 
+    for (int i = 0; i < numLines; i++) {
+        cudaMemcpy(d_miningData + i * lineSize, miningData[i].c_str(), lineSize * sizeof(char), cudaMemcpyHostToDevice);
+        std::cout << "Copied line " << i << " to GPU." << std::endl;
+    }
+    
+    std::cout << "Launching mining kernel." << std::endl;
+    launchMiningKernel(d_miningData, numLines, lineSize, d_results, target.c_str());
 
-//     cudaSetDevice(1);
-//     cudaMemcpy(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice);
-//     launchAntiAliasKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, 0);
-//     std::cout << "Launching GPU Kernel #1: " << std::endl;
-
-
-//     cudaDeviceSynchronize();
-//     cudaMemcpy(output, d_output0, sizePerGPU, cudaMemcpyDeviceToHost);
-//     cudaMemcpy(output + sizePerGPU, d_output1, sizePerGPU, cudaMemcpyDeviceToHost);
-
-
-//     cudaSetDevice(0);
-//     cudaFree(d_input0);
-//     cudaFree(d_output0);
-//     cudaSetDevice(1);
-//     cudaFree(d_input1);
-//     cudaFree(d_output1);
-
-//     std::cout << "End sharpening ..." << std::endl;
-// }
+    std::string result;
+    for (int i = 0; i < numLines; i++) {
+        char found;
+        cudaError_t err = cudaMemcpy(&found, d_results + i, sizeof(char), cudaMemcpyDeviceToHost);
+        if (found == 1) {
+            result = miningData[i];
+            std::cout << "Match found in line " << i << "." << std::endl;
+            break;
+        } else {
+            std::cout << "No match found in line " << i << "." << std::endl;
+        }
+    }
+    return result;
+}
