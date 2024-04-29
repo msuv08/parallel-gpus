@@ -6,6 +6,34 @@
 
 __constant__ float laplacianFilter[9] = {-1, -1, -1, -1, 8, -1, -1, -1, -1};
 
+__device__ void simpleHash(const char* data, char* hash, int lineSize) {
+    unsigned long hashValue = 5381;
+    for (int i = 0; i < lineSize; ++i) {
+        char c = data[i];
+        hashValue = ((hashValue << 5) + hashValue) + c;
+    }
+    unsigned long mask = 15; 
+    for (int i = 63; i >= 0; --i) {
+        char digit = (hashValue & mask) + '0';
+        if (digit > '9') {
+            digit += 7; 
+        }
+        hash[i] = digit;
+        hashValue >>= 4; 
+    }
+    hash[64] = '\0'; 
+}
+
+__device__ bool isHashValid(const char* hash, const char* target) {
+    for (int i = 0; i < 64; ++i) {
+        if (hash[i] > target[i])
+            return false;
+        if (hash[i] < target[i])
+            return true;
+    }
+    return true;  
+}
+
 __global__ void grayscaleKernel(unsigned char* input, unsigned char* output, int width, int height) {
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -31,6 +59,37 @@ __global__ void upsampleKernel(unsigned char* input, unsigned char* output, int 
             output[(y * inputWidth * scaleFactor + x) * 3 + c] = input[(srcY * inputWidth + srcX) * 3 + c];
         }
     }
+}
+
+__global__ void miningKernel(char* data, int numLines, int lineSize, char* results, const char* target) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    char* localResults = (char*)malloc(numLines * sizeof(char));
+
+    for (int i = idx; i < numLines; i += stride) {
+        char* hash = (char*)malloc(65 * sizeof(char));
+        simpleHash(&data[i * (lineSize + 1)], hash, lineSize);
+        hash[64] = '\0'; 
+
+        if (isHashValid(hash, target)) {
+            localResults[i] = 1;
+        } else {
+            localResults[i] = 0;
+        }
+
+        free(hash);
+    }
+
+    __syncthreads();
+
+    if (threadIdx.x == 0) {
+        for (int i = 0; i < numLines; i++) {
+            results[i] = localResults[i];
+        }
+    }
+
+    free(localResults);
 }
 
 // https://homepages.inf.ed.ac.uk/rbf/HIPR2/log.htm -> 8 worked best here (omeed)
@@ -128,4 +187,11 @@ extern "C" void launchMatrixMulKernel(float* A, float* B, float* C, int A_rows, 
     matrixMulKernel<<<gridSize, blockSize, 0, stream>>>(A, B, C, A_rows, A_cols, B_cols);
     cudaDeviceSynchronize();
     std::cout << "Matrix multiplication kernel execution complete." << std::endl;
+}
+
+extern "C" void launchMiningKernel(char* d_miningData, int numLines, int lineSize, char* d_results, const char* target) {
+    int blockSize = 1024;  
+    int gridSize = (numLines + blockSize - 1) / blockSize;
+    miningKernel<<<gridSize, blockSize>>>(d_miningData, numLines, lineSize, d_results, target);
+    cudaDeviceSynchronize();
 }
