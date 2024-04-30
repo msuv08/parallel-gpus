@@ -106,23 +106,74 @@ void MegaGPU::prepareData(float* input, int size) {
     inputFile.close();
 }
 
-void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int height) {
-    float* d_input;
-    cufftComplex* d_output;
-    cudaMalloc((void**)&d_input, width * sizeof(float));
-    cudaMalloc((void**)&d_output, (width / 2 + 1) * height * sizeof(cufftComplex));
-    cudaMemcpy(d_input, input, width * sizeof(float), cudaMemcpyHostToDevice);
-    cudaStream_t stream;
-    cudaStreamCreate(&stream);
+// void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int height) {
+//     float* d_input;
+//     cufftComplex* d_output;
+//     cudaMalloc((void**)&d_input, width * sizeof(float));
+//     cudaMalloc((void**)&d_output, (width / 2 + 1) * height * sizeof(cufftComplex));
+//     cudaMemcpy(d_input, input, width * sizeof(float), cudaMemcpyHostToDevice);
+//     cudaStream_t stream;
+//     cudaStreamCreate(&stream);
 
-    // TODO: potentially do time based operations here on kernel call. - omeed
-    performFFTKernel(d_input, d_output, width, height, stream);
+//     // TODO: potentially do time based operations here on kernel call. - omeed
+//     performFFTKernel(d_input, d_output, width, height, stream);
     
-    cudaMemcpy(output, d_output, (width / 2 + 1) * height * sizeof(cufftComplex), cudaMemcpyDeviceToHost);
-    cudaFree(d_input);
-    cudaFree(d_output);
-    cudaStreamDestroy(stream);
+//     cudaMemcpy(output, d_output, (width / 2 + 1) * height * sizeof(cufftComplex), cudaMemcpyDeviceToHost);
+//     cudaFree(d_input);
+//     cudaFree(d_output);
+//     cudaStreamDestroy(stream);
+// }
+
+void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int height, int numGPUs) {
+    int chunkHeight = height / numGPUs;
+    int remainingHeight = height % numGPUs;
+
+    std::vector<float*> d_inputChunks(numGPUs);
+    std::vector<cufftComplex*> d_outputChunks(numGPUs);
+    std::vector<cudaStream_t> streams(numGPUs);
+
+    for (int i = 0; i < numGPUs; ++i) {
+        cudaSetDevice(i);
+
+        int chunkSize = chunkHeight;
+        if (i == numGPUs - 1)
+            chunkSize += remainingHeight;
+
+        cudaMalloc((void**)&d_inputChunks[i], width * chunkSize * sizeof(float));
+        cudaMalloc((void**)&d_outputChunks[i], (width / 2 + 1) * chunkSize * sizeof(cufftComplex));
+
+        int offset = i * chunkHeight;
+        cudaMemcpy(d_inputChunks[i], input + offset * width, width * chunkSize * sizeof(float), cudaMemcpyHostToDevice);
+
+        cudaStreamCreate(&streams[i]);
+    }
+
+    for (int i = 0; i < numGPUs; ++i) {
+        cudaSetDevice(i);
+
+        int chunkSize = chunkHeight;
+        if (i == numGPUs - 1)
+            chunkSize += remainingHeight;
+
+        performFFTKernel(d_inputChunks[i], d_outputChunks[i], width, chunkSize, streams[i]);
+    }
+
+    for (int i = 0; i < numGPUs; ++i) {
+        cudaSetDevice(i);
+
+        int chunkSize = chunkHeight;
+        if (i == numGPUs - 1)
+            chunkSize += remainingHeight;
+
+        int offset = i * chunkHeight;
+        cudaMemcpy(output + offset * (width / 2 + 1), d_outputChunks[i], (width / 2 + 1) * chunkSize * sizeof(cufftComplex), cudaMemcpyDeviceToHost);
+
+        cudaFree(d_inputChunks[i]);
+        cudaFree(d_outputChunks[i]);
+        cudaStreamDestroy(streams[i]);
+    }
 }
+
 
 void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor) {
     imageWidth = width;
