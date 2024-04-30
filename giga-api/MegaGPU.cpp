@@ -222,6 +222,28 @@ void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, i
     std::cout << "End image upsampling..." << std::endl;
 }
 
+void MegaGPU::singleGPU_upsampling(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor) {
+    
+    imageWidth = width;
+    imageHeight = height;
+    int imageSize = imageWidth * imageHeight * 3; 
+    int outputWidth = imageWidth * scaleFactor;
+    int outputHeight = imageHeight * scaleFactor;
+    int outputSize = outputWidth * outputHeight * 3;
+    std::cout << "Begin image upsampling..." << std::endl;
+    cudaSetDevice(0);
+    cudaMalloc(&d_input0, imageSize);
+    cudaMalloc(&d_output0, outputSize);
+    cudaMemcpy(d_input0, input, imageSize, cudaMemcpyHostToDevice);
+    launchUpsampleKernel(d_input0, d_output0, imageWidth, imageHeight, scaleFactor, 0);
+    std::cout << "Launching GPU Kernel" << std::endl;
+    cudaDeviceSynchronize();
+    cudaMemcpy(output, d_output0, outputSize, cudaMemcpyDeviceToHost);
+    cudaFree(d_input0);
+    cudaFree(d_output0);
+    std::cout << "End image upsampling..." << std::endl;
+}
+
 void MegaGPU::upsampleAllImages(const std::vector<std::string>& imagePaths, int scaleFactor) {
     // put half the image paths in the list on one GPU for processing
     std::vector<std::string> gpu0Images(imagePaths.begin(), imagePaths.begin() + imagePaths.size() / 2);

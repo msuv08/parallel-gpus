@@ -15,7 +15,8 @@ void runSingleImageUpsampling(const std::string& imagePath, int scaleFactor) {
     std::memcpy(input.data(), img.data, img.total() * img.channels());
 
     MegaGPU mega;
-    mega.upsampleImage(input.data(), output.data(), width, height, scaleFactor);
+    // void MegaGPU::singleGPU_upsampling(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor) {
+    mega.singleGPU_upsampling(input.data(), output.data(), width, height, scaleFactor);
     cv::Mat resultImg(height * scaleFactor, width * scaleFactor, CV_8UC3, output.data());
     cv::imwrite("upsampled_image.png", resultImg);
     std::cout << "Upsampled image saved to image_upsampled.png" << std::endl;

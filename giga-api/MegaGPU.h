@@ -21,7 +21,9 @@ public:
     void sharpenImage(const unsigned char* input, unsigned char* output, int width, int height);
     void performMatrixMultiplication(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols);
     std::string parallelMining(const std::string& blockData, const std::string& target);
-
+// void MegaGPU::singleGPU_upsampling(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor) {
+    void singleGPU_upsampling(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
+    
 
 private:
     // RGB to Grayscale variables
