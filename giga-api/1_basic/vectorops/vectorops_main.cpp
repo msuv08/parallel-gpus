@@ -1,13 +1,29 @@
 #include "MegaGPU.h"
 #include <iostream>
 #include <vector>
+#include <random>
+
+// Function to generate a large vector with random values
+std::vector<float> generate_large_vector(size_t size) {
+    std::vector<float> v(size);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(-10.0f, 10.0f);
+    for (size_t i = 0; i < size; ++i) {
+        v[i] = dis(gen);
+    }
+    return v;
+}
+
 
 int main() {
     MegaGPU mega;
 
     // vectors for dot and cross product
-    std::vector<float> a = {1.0f, 2.0f, 3.0f, 1.0f, 2.0f, 3.0f};
-    std::vector<float> b = {4.0f, 5.0f, 6.0f, 1.0f, 2.0f, 3.0f};
+    const size_t vector_size = 1000000;  // Increase the vector size to 1 million elements
+
+    std::vector<float> a = generate_large_vector(vector_size);
+    std::vector<float> b = generate_large_vector(vector_size);
 
     // making containers for results
     float dotProductResult = 0.0f;
