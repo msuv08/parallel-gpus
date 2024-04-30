@@ -11,7 +11,10 @@ int main() {
     MegaGPU mega;
     // input data comes from the signal generation! :)
     mega.prepareData(input.data(), width);
-    mega.performFFT(input.data(), output.data(), width, 1);
+    // mega.performFFT(input.data(), output.data(), width, 1);
+    // make a new call with 2 gpus
+    mega.performFFT(input.data(), output.data(), width, 1, 2);
+
 
     // Save the FFT output to a file, potentially for analysis! 
     // not used anywhere.

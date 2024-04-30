@@ -13,7 +13,9 @@ public:
     ~MegaGPU(); 
     void convertToGrayscale(const unsigned char* input, unsigned char* output, int width, int height);
     void prepareData(float* input, int size);
-    void performFFT(float* input, cufftComplex* output, int width, int height);
+    // void performFFT(float* input, cufftComplex* output, int width, int height);
+    // void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int height, int numGPUs) {
+    void performFFT(float* input, cufftComplex* output, int width, int height, int numGPUs);
     void upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
     void upsampleAllImages(const std::vector<std::string>& imagePaths, int scaleFactor);
     void sharpenImage(const unsigned char* input, unsigned char* output, int width, int height);
