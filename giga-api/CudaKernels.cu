@@ -130,6 +130,62 @@ __global__ void matrixMulKernel(float* A, float* B, float* C, int A_rows, int A_
     }
 }
 
+__global__ void vectorDotKernel(const float* a, const float* b, float* result, int n) {
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x;
+
+    __shared__ float cache[256]; // Assuming a block size of 256, adjust as needed
+
+    float temp_sum = 0.0;
+    for (int i = index; i < n; i += stride) {
+        temp_sum += a[i] * b[i];
+    }
+
+    cache[threadIdx.x] = temp_sum;
+    __syncthreads();
+
+    // Reduction in shared memory
+    int i = blockDim.x / 2;
+    while (i != 0) {
+        if (threadIdx.x < i) {
+            cache[threadIdx.x] += cache[threadIdx.x + i];
+        }
+        __syncthreads();
+        i /= 2;
+    }
+
+    if (threadIdx.x == 0)
+        atomicAdd(result, cache[0]);
+}
+
+__global__ void vectorL2NormKernel(const float* a, float* result, int n) {
+    int index = threadIdx.x + blockIdx.x * blockDim.x;
+    int stride = blockDim.x * gridDim.x;
+
+    __shared__ float cache[256]; // Assuming a block size of 256, adjust as needed
+
+    float temp_sum = 0.0;
+    for (int i = index; i < n; i += stride) {
+        temp_sum += a[i] * a[i];
+    }
+
+    cache[threadIdx.x] = temp_sum;
+    __syncthreads();
+
+    // Reduction in shared memory
+    int i = blockDim.x / 2;
+    while (i != 0) {
+        if (threadIdx.x < i) {
+            cache[threadIdx.x] += cache[threadIdx.x + i];
+        }
+        __syncthreads();
+        i /= 2;
+    }
+
+    if (threadIdx.x == 0)
+        atomicAdd(result, cache[0]);
+}
+
 extern "C" void launchGrayscaleKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream) {
     dim3 blockSize(16, 16);
     dim3 gridSize((width + 15) / 16, (height + 15) / 16);
@@ -180,4 +236,22 @@ extern "C" void launchMiningKernel(char* d_miningData, int numLines, int lineSiz
     int blockSize = 1024;  
     int gridSize = (numLines + blockSize - 1) / blockSize;
     miningKernel<<<gridSize, blockSize>>>(d_miningData, numLines, lineSize, d_results, target);
+}
+
+extern "C" void launchVectorDotKernel(const float* a, const float* b, float* result, int n, cudaStream_t stream) {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+
+    vectorDotKernel<<<numBlocks, blockSize, 0, stream>>>(a, b, result, n);
+    cudaDeviceSynchronize();
+    std::cout << "Vector dot product kernel execution complete." << std::endl;
+}
+
+extern "C" void launchVectorL2NormKernel(const float* a, float* result, int n, cudaStream_t stream) {
+    int blockSize = 256;
+    int numBlocks = (n + blockSize - 1) / blockSize;
+
+    vectorL2NormKernel<<<numBlocks, blockSize, 0, stream>>>(a, result, n);
+    cudaDeviceSynchronize();
+    std::cout << "Vector L2 norm kernel execution complete." << std::endl;
 }

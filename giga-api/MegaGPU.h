@@ -20,6 +20,8 @@ public:
     void upsampleAllImages(const std::vector<std::string>& imagePaths, int scaleFactor);
     void sharpenImage(const unsigned char* input, unsigned char* output, int width, int height);
     void performMatrixMultiplication(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols);
+    void computeDotProduct(const float* a, const float* b, float& result, int n);
+    void computeL2Norm(const float* a, float& result, int n);
     std::string parallelMining(const std::string& blockData, const std::string& target);
 
 
@@ -36,6 +38,10 @@ private:
     float* d_inputA0, *d_inputB0, *d_outputC0;
     float* d_inputA1, *d_inputB1, *d_outputC1;
     int sizePerGPU_A, sizePerGPU_B, sizePerGPU_C;
+
+    // Vector operations
+    float* d_vectorA, *d_vectorB, *d_vectorC;
+    float* d_scalarResult;
     // mining pointers
     char* d_miningData;
     char* d_results;
