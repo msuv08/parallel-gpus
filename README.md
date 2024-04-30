@@ -34,4 +34,7 @@ https://homepages.inf.ed.ac.uk/rbf/HIPR2/log.htm
 
 https://forums.developer.nvidia.com/t/processing-image-with-a-cuda-kernel-gives-me-different-result-than-a-seemingly-equivalent-cpu-function/282033
 
+https://developer.download.nvidia.com/compute/cuda/1.0/CUFFT_Library_1.0.pdf
+
+
 

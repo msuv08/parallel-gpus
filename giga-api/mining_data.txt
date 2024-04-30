@@ -1,0 +1,3 @@
+MegaGPU Mining Simulation - Block Data
+Timestamp: 1622000000
+Miner Address: 0x1234567890abcdef
