@@ -112,12 +112,6 @@ __global__ void vectorDotKernel(const float* a, const float* b, float* result, i
         atomicAdd(result, cache[0]);
 }
 
-__global__ void vectorCrossKernel(const float* a, const float* b, float* c) {
-    if (threadIdx.x == 0) c[0] = a[1] * b[2] - a[2] * b[1];
-    if (threadIdx.x == 1) c[1] = a[2] * b[0] - a[0] * b[2];
-    if (threadIdx.x == 2) c[2] = a[0] * b[1] - a[1] * b[0];
-}
-
 __global__ void vectorL2NormKernel(const float* a, float* result, int n) {
     int index = threadIdx.x + blockIdx.x * blockDim.x;
     int stride = blockDim.x * gridDim.x;
@@ -201,14 +195,8 @@ extern "C" void launchVectorDotKernel(const float* a, const float* b, float* res
     std::cout << "Vector dot product kernel execution complete." << std::endl;
 }
 
-extern "C" void launchVectorCrossKernel(const float* a, const float* b, float* c, cudaStream_t stream) {
-    vectorCrossKernel<<<1, 3, 0, stream>>>(a, b, c); // Only one block of three threads needed
-    cudaDeviceSynchronize();
-    std::cout << "Vector cross product kernel execution complete." << std::endl;
-}
-
 extern "C" void launchVectorL2NormKernel(const float* a, float* result, int n, cudaStream_t stream) {
-    int blockSize = 256; // Tune this parameter based on your hardware
+    int blockSize = 256;
     int numBlocks = (n + blockSize - 1) / blockSize;
 
     vectorL2NormKernel<<<numBlocks, blockSize, 0, stream>>>(a, result, n);

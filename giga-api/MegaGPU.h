@@ -19,7 +19,6 @@ public:
     void sharpenImage(const unsigned char* input, unsigned char* output, int width, int height);
     void performMatrixMultiplication(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols);
     void computeDotProduct(const float* a, const float* b, float& result, int n);
-    void computeCrossProduct(const float* a, const float* b, float* c);
     void computeL2Norm(const float* a, float& result, int n);
 private:
     // RGB to Grayscale variables
