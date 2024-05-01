@@ -17,7 +17,7 @@ void printMatrix(const std::vector<float>& matrix, int rows, int cols) {
 }
 
 int main() {
-    int A_rows = 1024, A_cols = 1024, B_cols = 1024;
+    int A_rows = 10240, A_cols = 10240, B_cols = 10240;
     std::vector<float> A, B, C;
     initializeMatrix(A, A_rows, A_cols, 3.0);
     initializeMatrix(B, A_cols, B_cols, 1.0);
