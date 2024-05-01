@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 # Generate a more complex signal
 frequencies = [1.0, 5.0, 10.0, 20.0, 50.0]  # Multiple frequencies
-sample_rate = 44100.0  # Higher sample rate
-duration = 10.0  # Longer duration
+sample_rate = 1024.0  # Desired sample rate
+duration = 180.0  # Extremely long duration (in seconds)
 
 t = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
 signal = np.zeros_like(t)
@@ -22,15 +22,18 @@ signal /= np.max(np.abs(signal))
 # Save the signal to a file
 np.savetxt("input_signal.txt", signal, fmt="%.10f")
 
-# Plot the signal
+# Plot a small portion of the signal
+plot_duration = 1.0  # Duration of the portion to plot (in seconds)
+plot_samples = int(sample_rate * plot_duration)
+plot_t = t[:plot_samples]
+plot_signal = signal[:plot_samples]
+
 plt.figure(figsize=(10, 4))
-plt.plot(t, signal)
+plt.plot(plot_t, plot_signal)
 plt.xlabel("Time (s)")
 plt.ylabel("Amplitude")
-plt.title("Generated Signal")
+plt.title("Generated Signal (Portion)")
 plt.grid(True)
 plt.tight_layout()
-
-
-# save the plot
-plt.savefig("generated_signal.png")
+# Save the plot
+plt.savefig("generated_signal_large.png")
