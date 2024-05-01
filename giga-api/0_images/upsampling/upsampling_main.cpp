@@ -24,7 +24,7 @@ void runSingleImageUpsampling(const std::string& imagePath, int scaleFactor) {
 void processSingleImage() {
     std::string imagePath="img.png";
     // integer for the scale factor
-    int scaleFactor=20;
+    int scaleFactor=40;
     // std::cout << "Please enter the exact path to your image: ";
     // std::cin >> imagePath;
     // std::cout << "What factor would you like to upscale your image by: ";
