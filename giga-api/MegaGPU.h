@@ -13,8 +13,6 @@ public:
     ~MegaGPU(); 
     void convertToGrayscale(const unsigned char* input, unsigned char* output, int width, int height);
     void prepareData(float* input, int size);
-    // void performFFT(float* input, cufftComplex* output, int width, int height);
-    // void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int height, int numGPUs) {
     void performFFT(float* input, cufftComplex* output, int width, int height, int numGPUs);
     void upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
     void upsampleAllImages(const std::vector<std::string>& imagePaths, int scaleFactor);
@@ -23,6 +21,7 @@ public:
     void computeDotProduct(const float* a, const float* b, float& result, int n);
     void computeL2Norm(const float* a, float& result, int n);
     std::string parallelMining(const std::string& blockData, const std::string& target);
+    void singleGPU_upsampling(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
 
 
 private:
