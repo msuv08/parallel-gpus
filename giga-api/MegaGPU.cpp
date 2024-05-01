@@ -176,7 +176,6 @@ void MegaGPU::performFFT(float* input, cufftComplex* output, int width, int heig
     }
 }
 
-
 void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor) {
     imageWidth = width;
     imageHeight = height;
@@ -185,42 +184,50 @@ void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, i
     int outputHeight = imageHeight * scaleFactor;
     int outputSizePerGPU = outputWidth * (outputHeight / 2) * 3;
     std::cout << "Begin image upsampling..." << std::endl;
-
-    // Allocate memory on GPUs
+    cudaStream_t stream0, stream1;
+    cudaStreamCreate(&stream0);
+    cudaStreamCreate(&stream1);
     cudaSetDevice(0);
     cudaMalloc(&d_input0, sizePerGPU);
     cudaMalloc(&d_output0, outputSizePerGPU);
-
     cudaSetDevice(1);
     cudaMalloc(&d_input1, sizePerGPU);
     cudaMalloc(&d_output1, outputSizePerGPU);
-
     int halfHeight = imageHeight / 2;
 
     cudaSetDevice(0);
-    cudaMemcpy(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice);
-    launchUpsampleKernel(d_input0, d_output0, imageWidth, halfHeight, scaleFactor, 0);
-    std::cout << "Launching GPU Kernel #0: " << std::endl;
+    cudaMemcpyAsync(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice, stream0);
+    launchUpsampleKernel(d_input0, d_output0, imageWidth, halfHeight, scaleFactor, stream0);
+    std::cout << "Launching GPU Kernel #0" << std::endl;
 
-    // Copy to GPU 1
     cudaSetDevice(1);
-    cudaMemcpy(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice);
-    launchUpsampleKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, scaleFactor, 0);
-    std::cout << "Launching GPU Kernel #1: " << std::endl;
+    cudaMemcpyAsync(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice, stream1);
+    launchUpsampleKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, scaleFactor, stream1);
+    std::cout << "Launching GPU Kernel #1" << std::endl;
+    cudaSetDevice(0);
+    cudaStreamSynchronize(stream0);
+    cudaMemcpyAsync(output, d_output0, outputSizePerGPU, cudaMemcpyDeviceToHost, stream0);
 
-    // Copy results back
+    cudaSetDevice(1);
+    cudaStreamSynchronize(stream1);
+    cudaMemcpyAsync(output + outputSizePerGPU, d_output1, outputSizePerGPU, cudaMemcpyDeviceToHost, stream1);
+
+    cudaSetDevice(0);
     cudaDeviceSynchronize();
-    cudaMemcpy(output, d_output0, outputSizePerGPU, cudaMemcpyDeviceToHost);
-    cudaMemcpy(output + outputSizePerGPU, d_output1, outputSizePerGPU, cudaMemcpyDeviceToHost);
+    cudaSetDevice(1);
+    cudaDeviceSynchronize();
 
-    // Free memory on GPUs
+
     cudaSetDevice(0);
     cudaFree(d_input0);
     cudaFree(d_output0);
+    cudaStreamDestroy(stream0);
 
     cudaSetDevice(1);
     cudaFree(d_input1);
     cudaFree(d_output1);
+    cudaStreamDestroy(stream1);
+
     std::cout << "End image upsampling..." << std::endl;
 }
 
@@ -503,4 +510,26 @@ std::string MegaGPU::parallelMining(const std::string& blockData, const std::str
         }
     }
     return result;
+}
+
+void MegaGPU::singleGPU_upsampling(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor) {
+
+    imageWidth = width;
+    imageHeight = height;
+    int imageSize = imageWidth * imageHeight * 3; 
+    int outputWidth = imageWidth * scaleFactor;
+    int outputHeight = imageHeight * scaleFactor;
+    int outputSize = outputWidth * outputHeight * 3;
+    std::cout << "Begin image upsampling..." << std::endl;
+    cudaSetDevice(0);
+    cudaMalloc(&d_input0, imageSize);
+    cudaMalloc(&d_output0, outputSize);
+    cudaMemcpy(d_input0, input, imageSize, cudaMemcpyHostToDevice);
+    launchUpsampleKernel(d_input0, d_output0, imageWidth, imageHeight, scaleFactor, 0);
+    std::cout << "Launching GPU Kernel" << std::endl;
+    cudaDeviceSynchronize();
+    cudaMemcpy(output, d_output0, outputSize, cudaMemcpyDeviceToHost);
+    cudaFree(d_input0);
+    cudaFree(d_output0);
+    std::cout << "End image upsampling..." << std::endl;
 }
