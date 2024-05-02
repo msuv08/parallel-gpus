@@ -13,14 +13,17 @@ NVCC=nvcc
 # Compiler flags
 NVCC_FLAGS=-std=c++17 -I$(OPENCV_INCLUDE_DIR) -I$(PARENT_DIR) \
            -L$(OPENCV_LIB_DIR) -L$(CUDA_LIB_DIR) \
-           -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lcufft
+           -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lcufft -lcurand
 
 # Main target
-all: matmult
+all: matmult cuBLAS
 
 # Main compilation rule
 matmult: matmult_main.cpp
 	$(NVCC) -o matmult matmult_main.cpp $(PARENT_DIR)/MegaGPU.cpp $(PARENT_DIR)/CudaKernels.cu $(NVCC_FLAGS)
+
+cuBLAS: cuBLASmatrix.cpp
+	$(NVCC) -o cuBLAS cuBLASmatrix.cpp $(PARENT_DIR)/MegaGPU.cpp $(PARENT_DIR)/CudaKernels.cu $(NVCC_FLAGS) -lcublas
 
 # Clean up
 clean:

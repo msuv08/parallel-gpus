@@ -229,7 +229,7 @@ extern "C" void launchMatrixMulKernel(float* A, float* B, float* C, int A_rows, 
     dim3 gridSize((B_cols + blockSize.x - 1) / blockSize.x, (A_rows + blockSize.y - 1) / blockSize.y);
     matrixMulKernel<<<gridSize, blockSize, 0, stream>>>(A, B, C, A_rows, A_cols, B_cols);
     cudaDeviceSynchronize();
-    std::cout << "Matrix multiplication kernel execution complete." << std::endl;
+    // std::cout << "Matrix multiplication kernel execution complete." << std::endl;
 }
 
 extern "C" void launchMiningKernel(char* d_miningData, int numLines, int lineSize, char* d_results, const char* target) {
