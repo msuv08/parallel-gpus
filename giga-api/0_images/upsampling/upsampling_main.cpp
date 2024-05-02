@@ -17,20 +17,49 @@ void runSingleImageUpsampling(const std::string& imagePath, int scaleFactor) {
     MegaGPU mega;
     mega.upsampleImage(input.data(), output.data(), width, height, scaleFactor);
     cv::Mat resultImg(height * scaleFactor, width * scaleFactor, CV_8UC3, output.data());
-    cv::imwrite("upsampled_image.jpg", resultImg);
+    cv::imwrite("upsampled_image.png", resultImg);
     std::cout << "Upsampled image saved to upsampled_image.png" << std::endl;
 }
 
 void processSingleImage() {
     std::string imagePath="img.png";
     // integer for the scale factor
-    int scaleFactor=40;
+    int scaleFactor=4;
     // std::cout << "Please enter the exact path to your image: ";
     // std::cin >> imagePath;
     // std::cout << "What factor would you like to upscale your image by: ";
     // std::cin >> scaleFactor;
     runSingleImageUpsampling(imagePath, scaleFactor);
 }
+
+// Function to print basic GPU stats
+void printGPUStats() {
+    int nDevices;
+    cudaGetDeviceCount(&nDevices);
+    for (int i = 0; i < nDevices; i++) {
+        cudaDeviceProp prop;
+        cudaGetDeviceProperties(&prop, i);
+        std::cout << "Device Number: " << i << std::endl;
+        std::cout << "  Device name: " << prop.name << std::endl;
+        std::cout << "  Memory Clock Rate (KHz): " << prop.memoryClockRate << std::endl;
+        std::cout << "  Memory Bus Width (bits): " << prop.memoryBusWidth << std::endl;
+        std::cout << "  Peak Memory Bandwidth (GB/s): "
+                  << 2.0 * prop.memoryClockRate * (prop.memoryBusWidth / 8) / 1.0e6 << std::endl;
+    }
+}
+
+// Method to benchmark scaling on a single image
+void benchmarkScaling(const std::string& imagePath) {
+    float milliseconds = 0;
+
+    for (int scaleFactor = 2; scaleFactor <= 40; scaleFactor += 1) {
+        std::cout << "FOR SCALE FACTOR: " << scaleFactor << std::endl;
+        runSingleImageUpsampling(imagePath, scaleFactor);
+        std::cout << std::endl;
+        // std::cout << "Time taken for scale factor " << scaleFactor << ": " << milliseconds << " ms" << std::endl;
+    }
+}
+
 
 void runMultipleImageUpsampling(const std::string& folderPath, int scaleFactor) {
 
@@ -61,20 +90,23 @@ void processPhotoDatabase() {
 }
 
 int main() {
-    int choice;
-    std::cout << "-=-=-=-=-=-=-=-" << std::endl;
-    std::cout << "Parallization can be advantageous on large factor upscaling or when processing a large database of images." << std::endl;
-    std::cout << "Press 0 to upsample a singular image or 1 to upscale a database of images: ";
-    std::cin >> choice;
+    // int choice;
+    // std::cout << "-=-=-=-=-=-=-=-" << std::endl;
+    // std::cout << "Parallization can be advantageous on large factor upscaling or when processing a large database of images." << std::endl;
+    // std::cout << "Press 0 to upsample a singular image or 1 to upscale a database of images: ";
+    // std::cin >> choice;
+    benchmarkScaling("img.png");
+    // printGPUStats();
+    // processSingleImage();
 
-    if (choice == 0) {
-        processSingleImage();
-    } else if (choice == 1) {
-        std::string folderPath = "photo_database";
-            processPhotoDatabase();
-    } else {
-        std::cerr << "Invalid input. Please enter 0 or 1." << std::endl;
-        return -1;
-    }
-    return 0;
+    // if (choice == 0) {
+    //     processSingleImage();
+    // } else if (choice == 1) {
+    //     std::string folderPath = "photo_database";
+    //         processPhotoDatabase();
+    // } else {
+    //     std::cerr << "Invalid input. Please enter 0 or 1." << std::endl;
+    //     return -1;
+    // }
+    // return 0;
 }

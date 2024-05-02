@@ -214,7 +214,7 @@ extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output
     upsampleKernel<<<gridSize, blockSize, 0, stream>>>(input, output, inputWidth, inputHeight, scaleFactor);
     // do we need this?
     cudaDeviceSynchronize();
-    std::cout << "Upsampling kernel execution complete." << std::endl;
+    // std::cout << "Upsampling kernel execution complete." << std::endl;
 }
 
 extern "C" void launchSharpenKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream) {

@@ -183,13 +183,17 @@ void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, i
     int outputWidth = imageWidth * scaleFactor;
     int outputHeight = imageHeight * scaleFactor;
     int outputSizePerGPU = outputWidth * (outputHeight / 2) * 3;
-    std::cout << "Begin image upsampling..." << std::endl;
+
+    // std::cout << "Begin image upsampling..." << std::endl;
+
     cudaSetDevice(0);
     cudaMalloc(&d_input0, sizePerGPU);
     cudaMalloc(&d_output0, outputSizePerGPU);
+
     cudaSetDevice(1);
     cudaMalloc(&d_input1, sizePerGPU);
     cudaMalloc(&d_output1, outputSizePerGPU);
+
     int halfHeight = imageHeight / 2;
 
     //create streams for each GPU
@@ -199,16 +203,26 @@ void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, i
     cudaSetDevice(1);
     cudaStreamCreate(&stream1);
 
+    cudaEvent_t startEvent, stopEvent;
+    cudaEventCreate(&startEvent);
+    cudaEventCreate(&stopEvent);
+
+
+    cudaEventRecord(startEvent, 0);
+
     cudaSetDevice(0);
     cudaMemcpyAsync(d_input0, input, sizePerGPU, cudaMemcpyHostToDevice, stream0);
     launchUpsampleKernel(d_input0, d_output0, imageWidth, halfHeight, scaleFactor, stream0);
-    std::cout << "Launching GPU Kernel #0" << std::endl;
+    // std::cout << "Launching GPU Kernel #0" << std::endl;
 
     cudaSetDevice(1);
     cudaMemcpyAsync(d_input1, input + sizePerGPU, sizePerGPU, cudaMemcpyHostToDevice, stream1);
     launchUpsampleKernel(d_input1, d_output1, imageWidth, imageHeight - halfHeight, scaleFactor, stream1);
-    std::cout << "Launching GPU Kernel #1" << std::endl;
-    
+    // std::cout << "Launching GPU Kernel #1" << std::endl;
+
+    cudaEventRecord(stopEvent, 0);
+    cudaEventSynchronize(stopEvent);
+
     cudaSetDevice(0);
     cudaStreamSynchronize(stream0);
     cudaMemcpyAsync(output, d_output0, outputSizePerGPU, cudaMemcpyDeviceToHost, stream0);
@@ -223,6 +237,11 @@ void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, i
     cudaDeviceSynchronize();
 
 
+    float elapsedTime;
+    cudaEventElapsedTime(&elapsedTime, startEvent, stopEvent);
+
+    std::cout << "Total GPU time: " << elapsedTime << " ms" << std::endl;
+
     cudaSetDevice(0);
     cudaFree(d_input0);
     cudaFree(d_output0);
@@ -233,7 +252,10 @@ void MegaGPU::upsampleImage(const unsigned char* input, unsigned char* output, i
     cudaFree(d_output1);
     cudaStreamDestroy(stream1);
 
-    std::cout << "End image upsampling..." << std::endl;
+    cudaEventDestroy(startEvent);
+    cudaEventDestroy(stopEvent);
+
+    // std::cout << "End image upsampling..." << std::endl;
 }
 
 void MegaGPU::upsampleAllImages(const std::vector<std::string>& imagePaths, int scaleFactor) {
@@ -525,16 +547,39 @@ void MegaGPU::singleGPU_upsampling(const unsigned char* input, unsigned char* ou
     int outputWidth = imageWidth * scaleFactor;
     int outputHeight = imageHeight * scaleFactor;
     int outputSize = outputWidth * outputHeight * 3;
-    std::cout << "Begin image upsampling..." << std::endl;
+
+    // std::cout << "Begin image upsampling..." << std::endl;
+
     cudaSetDevice(0);
     cudaMalloc(&d_input0, imageSize);
     cudaMalloc(&d_output0, outputSize);
+
+    cudaEvent_t startEvent, stopEvent;
+    cudaEventCreate(&startEvent);
+    cudaEventCreate(&stopEvent);
+
+    cudaEventRecord(startEvent, 0);
+
     cudaMemcpy(d_input0, input, imageSize, cudaMemcpyHostToDevice);
     launchUpsampleKernel(d_input0, d_output0, imageWidth, imageHeight, scaleFactor, 0);
-    std::cout << "Launching GPU Kernel" << std::endl;
+    // std::cout << "Launching GPU Kernel" << std::endl;
     cudaDeviceSynchronize();
+
+    cudaEventRecord(stopEvent, 0);
+    cudaEventSynchronize(stopEvent);
+
+    float elapsedTime;
+    cudaEventElapsedTime(&elapsedTime, startEvent, stopEvent);
+
+    std::cout << "Total GPU time: " << elapsedTime << " ms" << std::endl;
+
     cudaMemcpy(output, d_output0, outputSize, cudaMemcpyDeviceToHost);
+
     cudaFree(d_input0);
     cudaFree(d_output0);
-    std::cout << "End image upsampling..." << std::endl;
+
+    cudaEventDestroy(startEvent);
+    cudaEventDestroy(stopEvent);
+
+    // std::cout << "End image upsampling..." << std::endl;
 }
