@@ -244,7 +244,7 @@ extern "C" void launchVectorDotKernel(const float* a, const float* b, float* res
 
     vectorDotKernel<<<numBlocks, blockSize, 0, stream>>>(a, b, result, n);
     cudaDeviceSynchronize();
-    std::cout << "Vector dot product kernel execution complete." << std::endl;
+    // std::cout << "Vector dot product kernel execution complete." << std::endl;
 }
 
 extern "C" void launchVectorL2NormKernel(const float* a, float* result, int n, cudaStream_t stream) {
@@ -253,5 +253,5 @@ extern "C" void launchVectorL2NormKernel(const float* a, float* result, int n, c
 
     vectorL2NormKernel<<<numBlocks, blockSize, 0, stream>>>(a, result, n);
     cudaDeviceSynchronize();
-    std::cout << "Vector L2 norm kernel execution complete." << std::endl;
+    // std::cout << "Vector L2 norm kernel execution complete." << std::endl;
 }

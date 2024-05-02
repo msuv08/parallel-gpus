@@ -361,12 +361,18 @@ void MegaGPU::performMatrixMultiplication(float* A, float* B, float* C, int A_ro
 void MegaGPU::computeDotProduct(const float* a, const float* b, float& result, int n) {
     int sizePerGPU = n / 2;
     int remainder = n % 2;
-    float partialResult[2] = {0.0f, 0.0f};
 
+    float partialResult[2] = {0.0f, 0.0f};
     cudaStream_t streams[2];
     float* d_vectorA[2];
     float* d_vectorB[2];
     float* d_scalarResult[2];
+
+    cudaEvent_t startEvent, stopEvent;
+    cudaEventCreate(&startEvent);
+    cudaEventCreate(&stopEvent);
+
+    cudaEventRecord(startEvent, 0);
 
     // Handle GPU 0
     cudaSetDevice(0);
@@ -374,14 +380,12 @@ void MegaGPU::computeDotProduct(const float* a, const float* b, float& result, i
     cudaMalloc((void**)&d_vectorA[0], (sizePerGPU + (remainder > 0 ? 1 : 0)) * sizeof(float));
     cudaMalloc((void**)&d_vectorB[0], (sizePerGPU + (remainder > 0 ? 1 : 0)) * sizeof(float));
     cudaMalloc((void**)&d_scalarResult[0], sizeof(float));
-
     cudaMemcpy(d_vectorA[0], a, (sizePerGPU + (remainder > 0 ? 1 : 0)) * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_vectorB[0], b, (sizePerGPU + (remainder > 0 ? 1 : 0)) * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemset(d_scalarResult[0], 0, sizeof(float));
-
     launchVectorDotKernel(d_vectorA[0], d_vectorB[0], d_scalarResult[0], sizePerGPU + (remainder > 0 ? 1 : 0), streams[0]);
     cudaMemcpyAsync(&partialResult[0], d_scalarResult[0], sizeof(float), cudaMemcpyDeviceToHost, streams[0]);
-    cudaStreamSynchronize(streams[0]);
+
 
     // Handle GPU 1
     cudaSetDevice(1);
@@ -389,17 +393,25 @@ void MegaGPU::computeDotProduct(const float* a, const float* b, float& result, i
     cudaMalloc((void**)&d_vectorA[1], sizePerGPU * sizeof(float));
     cudaMalloc((void**)&d_vectorB[1], sizePerGPU * sizeof(float));
     cudaMalloc((void**)&d_scalarResult[1], sizeof(float));
-
     cudaMemcpy(d_vectorA[1], a + sizePerGPU + (remainder > 0 ? 1 : 0), sizePerGPU * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_vectorB[1], b + sizePerGPU + (remainder > 0 ? 1 : 0), sizePerGPU * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemset(d_scalarResult[1], 0, sizeof(float));
-
     launchVectorDotKernel(d_vectorA[1], d_vectorB[1], d_scalarResult[1], sizePerGPU, streams[1]);
     cudaMemcpyAsync(&partialResult[1], d_scalarResult[1], sizeof(float), cudaMemcpyDeviceToHost, streams[1]);
+
+    cudaEventRecord(stopEvent, 0);
+    cudaEventSynchronize(stopEvent);
+
+    cudaSetDevice(0);
+    cudaStreamSynchronize(streams[0]);
+    cudaSetDevice(1);
     cudaStreamSynchronize(streams[1]);
 
-    // Cleanup
+    float elapsedTime;
+    cudaEventElapsedTime(&elapsedTime, startEvent, stopEvent);
+    std::cout << "Total GPU time: " << elapsedTime << " ms" << std::endl;
 
+    // Cleanup
     cudaSetDevice(0);
     cudaFree(d_vectorA[0]);
     cudaFree(d_vectorB[0]);
@@ -412,43 +424,58 @@ void MegaGPU::computeDotProduct(const float* a, const float* b, float& result, i
     cudaFree(d_scalarResult[1]);
     cudaStreamDestroy(streams[1]);
 
+    cudaEventDestroy(startEvent);
+    cudaEventDestroy(stopEvent);
+
     result = partialResult[0] + partialResult[1];
 }
 
 void MegaGPU::computeL2Norm(const float* a, float& result, int n) {
     int sizePerGPU = n / 2;
     int remainder = n % 2;
-    float sumOfSquares[2] = {0.0f, 0.0f};
 
+    float sumOfSquares[2] = {0.0f, 0.0f};
     cudaStream_t streams[2];
     float* d_vectorA[2];
     float* d_scalarResult[2];
+
+    cudaEvent_t startEvent, stopEvent;
+    cudaEventCreate(&startEvent);
+    cudaEventCreate(&stopEvent);
+
+    cudaEventRecord(startEvent, 0);
 
     // GPU 0
     cudaSetDevice(0);
     cudaStreamCreate(&streams[0]);
     cudaMalloc((void**)&d_vectorA[0], (sizePerGPU + (remainder > 0 ? 1 : 0)) * sizeof(float));
     cudaMalloc((void**)&d_scalarResult[0], sizeof(float));
-
     cudaMemcpy(d_vectorA[0], a, (sizePerGPU + (remainder > 0 ? 1 : 0)) * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemset(d_scalarResult[0], 0, sizeof(float));
-
     launchVectorL2NormKernel(d_vectorA[0], d_scalarResult[0], sizePerGPU + (remainder > 0 ? 1 : 0), streams[0]);
     cudaMemcpyAsync(&sumOfSquares[0], d_scalarResult[0], sizeof(float), cudaMemcpyDeviceToHost, streams[0]);
-    cudaStreamSynchronize(streams[0]);
 
     // GPU 1
     cudaSetDevice(1);
     cudaStreamCreate(&streams[1]);
     cudaMalloc((void**)&d_vectorA[1], sizePerGPU * sizeof(float));
     cudaMalloc((void**)&d_scalarResult[1], sizeof(float));
-
     cudaMemcpy(d_vectorA[1], a + sizePerGPU + (remainder > 0 ? 1 : 0), sizePerGPU * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemset(d_scalarResult[1], 0, sizeof(float));
-
     launchVectorL2NormKernel(d_vectorA[1], d_scalarResult[1], sizePerGPU, streams[1]);
     cudaMemcpyAsync(&sumOfSquares[1], d_scalarResult[1], sizeof(float), cudaMemcpyDeviceToHost, streams[1]);
+
+    cudaEventRecord(stopEvent, 0);
+    cudaEventSynchronize(stopEvent);
+
+    cudaSetDevice(0);
+    cudaStreamSynchronize(streams[0]);
+    cudaSetDevice(1);
     cudaStreamSynchronize(streams[1]);
+
+    float elapsedTime;
+    cudaEventElapsedTime(&elapsedTime, startEvent, stopEvent);
+    std::cout << "Total GPU time: " << elapsedTime << " ms" << std::endl;
 
     // Cleanup
     cudaSetDevice(0);
@@ -460,6 +487,9 @@ void MegaGPU::computeL2Norm(const float* a, float& result, int n) {
     cudaFree(d_vectorA[1]);
     cudaFree(d_scalarResult[1]);
     cudaStreamDestroy(streams[1]);
+
+    cudaEventDestroy(startEvent);
+    cudaEventDestroy(stopEvent);
 
     result = sqrt(sumOfSquares[0] + sumOfSquares[1]);
 }

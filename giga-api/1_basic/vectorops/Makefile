@@ -16,13 +16,15 @@ NVCC_FLAGS=-std=c++17 -I$(OPENCV_INCLUDE_DIR) -I$(PARENT_DIR) \
            -lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lcufft
 
 # Main target
-all: vectorops
+all: vectorops vectorbaseline
 
 # Main compilation rule
 vectorops: vectorops_main.cpp
 	$(NVCC) -o vectorops vectorops_main.cpp $(PARENT_DIR)/MegaGPU.cpp $(PARENT_DIR)/CudaKernels.cu $(NVCC_FLAGS)
 
+vectorbaseline: vectorbaseline.cpp
+	$(NVCC) -o vectorbaseline vectorbaseline.cpp $(PARENT_DIR)/MegaGPU.cpp $(PARENT_DIR)/CudaKernels.cu $(NVCC_FLAGS) -lcublas
 # Clean up
 clean:
-	rm -f vectorops
+	rm -f vectorops vectorbaseline
 	
