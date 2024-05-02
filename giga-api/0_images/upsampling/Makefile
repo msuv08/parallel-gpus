@@ -18,15 +18,12 @@ LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_highgui
 NVCC_FLAGS=-std=c++17 -I$(OPENCV_INCLUDE_DIR) -I$(PARENT_DIR)
 
 # Main target
-all: upsampling basic_upsampling
+all: upsampling
 
 # Main compilation rule
 upsampling: upsampling_main.cpp $(PARENT_DIR)/MegaGPU.cpp $(PARENT_DIR)/CudaKernels.cu
 	$(NVCC) $(NVCC_FLAGS) -o $@ $^ $(LDFLAGS) $(LDLIBS) -lcufft
 
-basic_upsampling: basic_upsampling.cpp
-	$(CXX) $(CXXFLAGS) -o $@ $< $(LDFLAGS) $(LDLIBS)
-
 # Clean up
 clean:
-	rm -f upsampling basic_upsampling
+	rm -f upsampling
