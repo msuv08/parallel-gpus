@@ -17,14 +17,14 @@ void runSingleImageUpsampling(const std::string& imagePath, int scaleFactor) {
     MegaGPU mega;
     mega.upsampleImage(input.data(), output.data(), width, height, scaleFactor);
     cv::Mat resultImg(height * scaleFactor, width * scaleFactor, CV_8UC3, output.data());
-    cv::imwrite("upsampled_image.jpg", resultImg);
+    cv::imwrite("images/upsampled_image.png", resultImg);
     std::cout << "Upsampled image saved to upsampled_image.png" << std::endl;
 }
 
 void processSingleImage() {
-    std::string imagePath="img.png";
+    std::string imagePath="images/img.png";
     // integer for the scale factor
-    int scaleFactor=40;
+    int scaleFactor=4;
     // std::cout << "Please enter the exact path to your image: ";
     // std::cin >> imagePath;
     // std::cout << "What factor would you like to upscale your image by: ";

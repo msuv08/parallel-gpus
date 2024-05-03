@@ -16,15 +16,15 @@ void runSingleImageSharpening(const std::string& imagePath, int scaleFactor) {
     MegaGPU mega;
     mega.sharpenImage(input.data(), output.data(), width, height);
     cv::Mat sharpenedImg(height, width, CV_8UC3, output.data());
-    cv::imwrite("sharpened_image.png", sharpenedImg);
+    cv::imwrite("images/sharpened_image.png", sharpenedImg);
     std::cout << "Sharpened image saved to sharpened_image.png" << std::endl;
 }
 
 void processSingleImage() {
-    std::string imagePath;
-    std::cout << "Please enter the exact path to your image: ";
-    std::cin >> imagePath;
-    runSingleImageSharpening(imagePath, 1);
+    // std::string imagePath;
+    // std::cout << "Please enter the exact path to your image: ";
+    // std::cin >> imagePath;
+    runSingleImageSharpening("images/image.png", 1);
 }
 
 int main() {
