@@ -16,12 +16,14 @@ public:
     void performFFT(float* input, cufftComplex* output, int width, int height, int numGPUs);
     void upsampleImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
     void upsampleAllImages(const std::vector<std::string>& imagePaths, int scaleFactor);
-    void sharpenImage(const unsigned char* input, unsigned char* output, int width, int height);
+    void sharpenImage(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
     void performMatrixMultiplication(float* A, float* B, float* C, int A_rows, int A_cols, int B_cols);
     void computeDotProduct(const float* a, const float* b, float& result, int n);
     void computeL2Norm(const float* a, float& result, int n);
     std::string parallelMining(const std::string& blockData, const std::string& target);
+    void singleGPU_sharpening(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
     void singleGPU_upsampling(const unsigned char* input, unsigned char* output, int width, int height, int scaleFactor);
+    void singleGPU_performFFT(float* input, cufftComplex* output, int width, int height, int numGPUs);
 
 
 private:
