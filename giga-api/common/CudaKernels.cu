@@ -81,7 +81,7 @@ __global__ void upsampleKernel(unsigned char* input, unsigned char* output, int 
 
 // https://homepages.inf.ed.ac.uk/rbf/HIPR2/log.htm -> 8 worked best here (omeed)
 // this version used -4 -> https://github.com/KhosroBahrami/ImageFiltering_CUDA/blob/master/LaplacianFilter/laplacianFilter.cu
-__global__ void sharpenKernel(unsigned char* input, unsigned char* output, int width, int height) {
+__global__ void sharpenKernel(unsigned char* input, unsigned char* output, int width, int height, int scaleFactor) {
     int x = threadIdx.x + blockIdx.x * blockDim.x;
     int y = threadIdx.y + blockIdx.y * blockDim.y;
 
@@ -104,13 +104,10 @@ __global__ void sharpenKernel(unsigned char* input, unsigned char* output, int w
                         float pixelValue = input[neighborIndex]; 
                         float filterValue = laplacianFilter[filterIndex]; 
                         sum += pixelValue * filterValue; 
-                } else {
-                    // add some weight to the sum if the pixel is out of bounds! 
-                    sum += 5;
                 }
             }
         }
-        float sharpened = sum + input[idx + c];
+        float sharpened = (sum + input[idx + c]) + scaleFactor;
         sharpened = max(sharpened, 0.0);
         sharpened = min(sharpened, 255.0);
         output[idx + c] = sharpened;
@@ -214,13 +211,13 @@ extern "C" void launchUpsampleKernel(unsigned char* input, unsigned char* output
     upsampleKernel<<<gridSize, blockSize, 0, stream>>>(input, output, inputWidth, inputHeight, scaleFactor);
     // do we need this?
     cudaDeviceSynchronize();
-    std::cout << "Upsampling kernel execution complete." << std::endl;
+    // std::cout << "Upsampling kernel execution complete." << std::endl;
 }
 
-extern "C" void launchSharpenKernel(unsigned char* input, unsigned char* output, int width, int height, cudaStream_t stream) {
+extern "C" void launchSharpenKernel(unsigned char* input, unsigned char* output, int width, int height, int scaleFactor, cudaStream_t stream) {
     dim3 blockSize(16, 16);
     dim3 gridSize((width + 15) / 16, (height + 15) / 16);
-    sharpenKernel<<<gridSize, blockSize, 0, stream>>>(input, output, width, height);
+    sharpenKernel<<<gridSize, blockSize, 0, stream>>>(input, output, width, height, scaleFactor);
     cudaDeviceSynchronize();
 }
 
