@@ -18,7 +18,7 @@ int main() {
 
     // Save the FFT output to a file, potentially for analysis! 
     // not used anywhere.
-    std::ofstream outputFile("fft_output.txt");
+    std::ofstream outputFile("params/fft_output.txt");
     for (int i = 0; i < output.size(); ++i) {
         outputFile << output[i].x << " " << output[i].y << "\n";
     }

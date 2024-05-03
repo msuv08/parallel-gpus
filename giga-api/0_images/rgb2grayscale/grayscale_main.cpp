@@ -4,7 +4,8 @@
 #include <string>
 
 int main() {
-    std::string imagePath = "cybertruck.jpeg";
+    // Load image
+    std::string imagePath = "images/cybertruck.jpeg";
     cv::Mat img = cv::imread(imagePath, cv::IMREAD_COLOR);
     if (img.empty()) {
         std::cerr << "Error: Image not found." << std::endl;
@@ -18,7 +19,7 @@ int main() {
     MegaGPU mega;
     mega.convertToGrayscale(input.data(), output.data(), width, height);
     cv::Mat resultImg(height, width, CV_8UC1, output.data());
-    cv::imwrite("cybertruck_grayscale.jpeg", resultImg);
+    cv::imwrite("images/cybertruck_grayscale.jpeg", resultImg);
     std::cout << "Grayscale image saved to cybertruck_grayscale.jpeg" << std::endl;
     return 0;
 }
